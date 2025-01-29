@@ -73,7 +73,7 @@ class Lead(models.Model):
     phone = models.CharField(max_length=50, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.ManyToManyField(Tag, blank=True)  # ✅ Many-to-Many for tags
+    tags = models.JSONField(blank=True, null=True)  # Store tags as a list of strings
 
     def __str__(self):
         return f"{self.name} - {self.organization.name}"

@@ -6,9 +6,9 @@ from ..models import Tag, Organization
 from ..serializers.tag_serializers import TagSerializer
 
 class TagView(APIView):
-    def post(self, request, org_id):
+    def post(self, request, slug):
         """Create a tag under an organization."""
-        organization = get_object_or_404(Organization, id=org_id)
+        organization = get_object_or_404(Organization, slug=slug)  # Use the slug to get the organization
         data = request.data
         data["organization"] = organization.id
         serializer = TagSerializer(data=data)
@@ -17,8 +17,9 @@ class TagView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request, org_id):
+    def get(self, request, slug):
         """Retrieve tags under an organization."""
-        tags = Tag.objects.filter(organization_id=org_id)
+        organization = get_object_or_404(Organization, slug=slug)  # Use the slug to get the organization
+        tags = Tag.objects.filter(organization=organization)
         serializer = TagSerializer(tags, many=True)
         return Response(serializer.data)

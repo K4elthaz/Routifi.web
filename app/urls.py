@@ -12,14 +12,14 @@ urlpatterns = [
     path("verify-token/", verify_supabase_token, name="verify-token"),
     
     # Organization Endpoints
-    path("<str:slug>/", OrganizationView.as_view(), name="organization-detail"),
+    path("organization/", OrganizationView.as_view(), name="organization-create"),  # ✅ For creating an org (POST)
+    path("<str:slug>/", OrganizationView.as_view(), name="organization-detail"),  # ✅ For retrieving an org (GET)
     path("<str:slug>/invite/", InviteUserToOrganization.as_view(), name="invite-user"),
-    path("organization/", OrganizationView.as_view(), name="organization-create"),
     path("invite/accept/<uuid:invite_id>/", AcceptInviteView.as_view(), name="accept-invite"),
-    
+
     # Lead Endpoints
-    path("organization/<uuid:org_id>/leads/", LeadView.as_view(), name="lead-list"),
     path("<str:slug>/leads/", LeadView.as_view(), name="lead-list"),
+    
     # Tag Endpoints
-    path("organization/<uuid:org_id>/tags/", TagView.as_view(), name="tag-list"),
+    path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),  # Corrected URL
 ]

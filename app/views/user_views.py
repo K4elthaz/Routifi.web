@@ -8,8 +8,6 @@ from django.http import JsonResponse
 
 supabase = create_supabase_client()
 
-
-
 class UserProfileView(APIView):
     def post(self, request):
         """
@@ -118,12 +116,29 @@ def verify_supabase_token(request):
     token = token.split("Bearer ")[-1]
     try:
         response = supabase.auth.get_user(token)
-        if response.error:
+
+        # Debugging: Print the full response
+        print(response)
+
+        # Check if there's an error in the response
+        if hasattr(response, 'error') and response.error:
             return JsonResponse({"error": response.error.message}, status=401)
 
-        return JsonResponse({"message": "Token is valid", "user": response.user})
+        # Manually convert the user object to a dictionary
+        user_data = {
+            "id": response.user.id,
+            "email": response.user.email,
+            "first_name": response.user.user_metadata.get("first_name", ""),
+            "last_name": response.user.user_metadata.get("last_name", ""),
+            # Add any other relevant fields from the user object
+        }
+
+        # Return the user data as a JSON response
+        return JsonResponse({"message": "Token is valid", "user": user_data})
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=401)
+
 
 
 class UserLoginView(APIView):

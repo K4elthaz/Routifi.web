@@ -1,3 +1,5 @@
+import json
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,6 +8,8 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from ..models import Organization, Membership, UserProfile
 from ..serializers.organization_serializers import OrganizationSerializer, MembershipSerializer
+from ..views.user_views import verify_supabase_token
+from django.http import JsonResponse
 
 class OrganizationView(APIView):
     def get(self, request, slug):
@@ -16,9 +20,27 @@ class OrganizationView(APIView):
 
     def post(self, request):
         """Create an organization."""
+        # Step 1: Verify the Supabase token
+        response = verify_supabase_token(request)  # This will verify the token and return user data
+        if response.status_code != 200:
+            return response  # If the token is invalid, return the error response
+
+        # Step 2: Extract user from the JSON response
+        try:
+            user_data = json.loads(response.content)  # Manually parse the JSON content
+        except json.JSONDecodeError:
+            return Response({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return Response({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        # Step 3: Serialize the organization data and save it with the authenticated user's profile
         serializer = OrganizationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(created_by=request.user)
+            serializer.save(created_by=user_profile)  # The 'created_by' field is set to the UserProfile
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
