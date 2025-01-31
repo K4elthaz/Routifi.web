@@ -1,12 +1,14 @@
 import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/login";
+import MobileLeads from "./pages/mobile-leads";
 
 function AppContent() {
   return (
     <>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/mobile-leads" element={<MobileLeads />} />
       </Routes>
     </>
   );
