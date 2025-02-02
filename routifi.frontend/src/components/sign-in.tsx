@@ -1,26 +1,24 @@
-import { useState } from "react"
-import { Input } from "./ui/input"
-import { Button } from "./ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
-import HeroBanner from "./hero-banner"
+import { useState } from "react";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import HeroBanner from "./hero-banner";
 
 export default function SignIn() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-  }
+    e.preventDefault();
+  };
 
   return (
     <div className="min-h-screen w-full flex bg-background">
       {/* Left Section */}
       <div className="hidden lg:flex lg:w-1/2 relative">
-          <div>
-            <HeroBanner/>
-          </div>
-
+        <div>
+          <HeroBanner />
+        </div>
       </div>
 
       {/* Right Section */}
@@ -83,6 +81,5 @@ export default function SignIn() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
-

@@ -4,6 +4,7 @@ import { ThemeProvider } from "./components/theme-provider";
 // import Login from "./pages/login";
 import MobileLeads from "./pages/mobile-leads";
 import Index from "./pages/landing-page";
+import Login from "./pages/login";
 
 function AppContent() {
   return (
@@ -11,6 +12,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/mobile-leads" element={<MobileLeads />} />
+        <Route path="/sign-in" element={<Login />} />
       </Routes>
     </>
   );
