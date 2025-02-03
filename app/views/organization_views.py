@@ -58,7 +58,7 @@ class InviteUserToOrganization(APIView):
         if not created and invite.accepted:
             return Response({"error": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
 
-        invite_link = f"http://yourfrontend.com{reverse('accept-invite', args=[invite.id])}"
+        invite_link = f"http://localhost:5173/{reverse('accept-invite', args=[invite.id])}"
         send_mail(
             "Organization Invitation",
             f"You've been invited to join {org.name}. Accept your invite here: {invite_link}",
