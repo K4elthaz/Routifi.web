@@ -1,27 +1,42 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import HeroBanner from "@/components/hero-banner";
+import { useState } from "react";
+import { loginUser } from "@/api/userAuthAPI";
+import useAuthStore from "@/store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const { setUser, setTokens } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    try {
+      const response = await loginUser({ email, password });
+      console.log("Login successful:", response);
+      setUser(response.user);
+      setTokens(response.access_token, response.refresh_token);
+      navigate("/");
+    } catch (err) {
+      setError(err as string);
+    }
   };
 
   return (
     <div className="min-h-screen w-full flex bg-background">
-      {/* Left Section */}
       <div className="hidden lg:flex lg:w-1/2 relative">
         <div>
           <HeroBanner />
         </div>
       </div>
 
-      {/* Right Section */}
       <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
         <Card className="w-full max-w-md bg-background">
           <CardHeader className="space-y-1">
@@ -34,7 +49,8 @@ export default function Login() {
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {error && <p className="text-red-500">{error}</p>}
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -46,10 +62,10 @@ export default function Login() {
                   id="email"
                   placeholder="you@example.com"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-background"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -67,10 +83,10 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="bg-background"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
               <Button type="submit" className="w-full">
