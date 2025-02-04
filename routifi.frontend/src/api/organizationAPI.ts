@@ -1,4 +1,4 @@
-import api from '@/utility/api';  // Assuming you have an Axios instance set up
+import api from "@/utility/api";  
 
 interface Organization {
   id: string;
@@ -11,7 +11,7 @@ interface InviteResponse {
   message: string;
 }
 
-// Create Organization
+// ✅ Create Organization (Authenticated)
 export const createOrganization = async (orgData: { name: string }): Promise<Organization> => {
   try {
     const response = await api.post("/organization/", orgData);
@@ -21,7 +21,17 @@ export const createOrganization = async (orgData: { name: string }): Promise<Org
   }
 };
 
-// Get Organization by Slug
+// ✅ Get Organizations for the Authenticated User
+export const getOrganizations = async (): Promise<Organization[]> => {
+  try {
+    const response = await api.get(`/organization/`);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || "Failed to fetch organizations";
+  }
+};
+
+// ✅ Get Organization by Slug (Requires Authentication)
 export const getOrganizationBySlug = async (slug: string): Promise<Organization> => {
   try {
     const response = await api.get(`/organization/${slug}/`);
@@ -31,7 +41,7 @@ export const getOrganizationBySlug = async (slug: string): Promise<Organization>
   }
 };
 
-// Invite User to Organization
+// ✅ Invite User to Organization
 export const inviteUserToOrganization = async (
   orgId: string,
   email: string
@@ -44,7 +54,7 @@ export const inviteUserToOrganization = async (
   }
 };
 
-// Accept Organization Invitation
+// ✅ Accept Organization Invitation
 export const acceptInvite = async (inviteId: string): Promise<{ message: string }> => {
   try {
     const response = await api.post(`/invite/accept/${inviteId}/`);

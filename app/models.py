@@ -9,7 +9,7 @@ class UserProfile(models.Model):
     last_name = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField(unique=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    location = models.CharField(max_length=255, blank=True, null=True)  # Added location field
+    location = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)  # Many-to-Many with Tags

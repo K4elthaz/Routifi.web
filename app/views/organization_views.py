@@ -12,11 +12,52 @@ from ..views.user_views import verify_supabase_token
 from django.http import JsonResponse
 
 class OrganizationView(APIView):
-    def get(self, request, slug):
-        """Retrieve organization details by slug."""
-        organization = get_object_or_404(Organization, slug=slug)
-        serializer = OrganizationSerializer(organization)
+    def get(self, request):
+        """Retrieve organizations created by the authenticated user."""
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return Response({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return Response({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        organizations = Organization.objects.filter(created_by=user_profile)
+        serializer = OrganizationSerializer(organizations, many=True)
         return Response(serializer.data)
+
+    def post(self, request):
+        """Create an organization."""
+        # Step 1: Verify the Supabase token
+        response = verify_supabase_token(request)  # This will verify the token and return user data
+        if response.status_code != 200:
+            return response  # If the token is invalid, return the error response
+
+        # Step 2: Extract user from the JSON response
+        try:
+            user_data = json.loads(response.content)  # Manually parse the JSON content
+        except json.JSONDecodeError:
+            return Response({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return Response({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        # Step 3: Serialize the organization data and save it with the authenticated user's profile
+        serializer = OrganizationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(created_by=user_profile)  # The 'created_by' field is set to the UserProfile
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request):
         """Create an organization."""
