@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils.text import slugify
 import uuid
+from django.core.exceptions import ValidationError
+from datetime import datetime
 
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
@@ -13,6 +15,13 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)  # Many-to-Many with Tags
+    availability = models.JSONField(default=list)  # Store list of available days (e.g. [0, 1, 2])
+
+    def clean(self):
+        """ Custom validation to ensure user is available on the current day """
+        current_day = datetime.now().weekday()  # 0 = Monday, 6 = Sunday
+        if current_day not in self.availability:
+            raise ValidationError(f"User is not available today ({current_day})")
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.supabase_uid})"
@@ -79,3 +88,15 @@ class Lead(models.Model):
         return f"{self.name} - {self.organization.name}"
 
 
+class Settings(models.Model):
+    organization = models.OneToOneField(Organization, on_delete=models.CASCADE)
+    one_to_one = models.BooleanField(default=False)  # Whether leads are sent to one user at a time
+
+    def save(self, *args, **kwargs):
+        # Ensure only one of these flags is True
+        if self.one_to_one:
+            # Make sure no other organizations have `one_to_one` set to True
+            other_settings = Settings.objects.exclude(id=self.id).filter(one_to_one=True)
+            if other_settings.exists():
+                raise ValueError("Only one organization can have 'one_to_one' set to True.")
+        super().save(*args, **kwargs)

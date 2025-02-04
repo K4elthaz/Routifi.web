@@ -1,7 +1,7 @@
 from django.urls import path
 from .views.user_views import UserProfileView, UserLoginView, verify_supabase_token
 from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView
-from .views.lead_views import LeadView
+from .views.lead_views import LeadView, LeadDecisionView
 from .views.tag_views import TagView
 
 urlpatterns = [
@@ -19,6 +19,9 @@ urlpatterns = [
 
     # Lead Endpoints
     path("<str:slug>/leads/", LeadView.as_view(), name="lead-list"),
+
+    path('lead/<int:lead_id>/accept/<str:token>/', LeadDecisionView.as_view(), name='lead-decision'),
+    path('leads/<slug:slug>/', LeadView.as_view(), name='create-lead'),
     
     # Tag Endpoints
     path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),  # Corrected URL
