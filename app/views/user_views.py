@@ -16,7 +16,7 @@ class UserProfileView(APIView):
         email = request.data.get("email")
         password = request.data.get("password")  # Ensure the user provides a password for Supabase
         full_name = request.data.get("full_name")
-        date_of_birth = request.data.get("date_of_birth")
+        location = request.data.get("location")
 
         if not email or not password:
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -44,7 +44,7 @@ class UserProfileView(APIView):
                 "supabase_uid": supabase_uid,
                 "email": email,
                 "full_name": full_name,
-                "date_of_birth": date_of_birth,
+                "location": location,
             }
 
             serializer = UserProfileSerializer(data=user_data)

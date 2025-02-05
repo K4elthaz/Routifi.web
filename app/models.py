@@ -9,7 +9,6 @@ class UserProfile(models.Model):
     supabase_uid = models.CharField(max_length=255, unique=True, primary_key=True)
     full_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    date_of_birth = models.DateField(blank=True, null=True)
     location = models.JSONField(default=list)  # Store [latitude, longitude]
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
