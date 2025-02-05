@@ -1,11 +1,10 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import HeroBanner from "@/components/hero-banner";
 import { useState } from "react";
 import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
   const { setUser, setTokens } = useAuthStore();
@@ -38,17 +37,17 @@ export default function Login() {
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
-        <Card className="w-full max-w-md bg-background">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
+        <div className="w-full max-w-md bg-background">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold">Sign in</h2>
             <p className="text-sm text-muted-foreground">
               Don&apos;t have an account?{" "}
-              <a href="#" className="text-primary hover:underline">
+              <Link to="/sign-up" className="text-primary hover:underline">
                 Sign up
-              </a>
+              </Link>
             </p>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div>
             <form className="space-y-4" onSubmit={handleSubmit}>
               {error && <p className="text-red-500">{error}</p>}
               <div className="space-y-2">
@@ -93,8 +92,8 @@ export default function Login() {
                 Sign in
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
