@@ -58,6 +58,7 @@ class LeadView(APIView):
             memberships__organization=organization, memberships__accepted=True
         )
 
+        # Modify matching logic: Match based on tag names (not IDs)
         matching_users = [
             user for user in users
             if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
@@ -66,13 +67,12 @@ class LeadView(APIView):
 
         print(f"Users to assign lead: {[user.email for user in matching_users]}")
 
-
         settings = Settings.objects.filter(organization=organization).first()
         if settings and settings.one_to_one and matching_users:
             rejected_users = redis_client.lrange(f"lead:{lead.id}:rejected_users", 0, -1)
             rejected_users = [uid.decode() for uid in rejected_users]
 
-            next_user = next((u for u in matching_users if str(u.id) not in rejected_users), None)
+            next_user = next((u for u in matching_users if str(u.supabase_uid) not in rejected_users), None)
 
             if next_user:
                 matching_users = [next_user]  
@@ -81,9 +81,10 @@ class LeadView(APIView):
 
         for user in matching_users:
             lead_id = str(lead.id)
-            user_id = str(user.id)
+            user_id = str(user.supabase_uid)
             token = str(uuid.uuid4())
 
+            # Store the token in Redis with the user_id and lead_id
             redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)
             print(f"Generated token for lead {lead.id}, user {user.email}: {token}")
 
@@ -102,8 +103,6 @@ class LeadView(APIView):
                 print(f"Error creating LeadAssignment: {e}")
 
             print(f"Lead assigned to {user.email}: {lead_link}")  # ✅ Debugging
-            expected_token = redis_client.get(f"lead:{lead_id}:user:{assignment.user.id}:token")
-            print(f"Expected token from Redis: {expected_token}")
 
 
 class LeadDecisionView(APIView):
@@ -128,7 +127,7 @@ class LeadDecisionView(APIView):
             return Response({"error": "No pending lead assignment found"}, status=status.HTTP_400_BAD_REQUEST)
 
         # ✅ Check Redis Token
-        expected_token = redis_client.get(f"lead:{lead_id}:user:{assignment.user.id}:token")
+        expected_token = redis_client.get(f"lead:{lead_id}:user:{user_id}:token")  # Use user_id directly here
         if not expected_token or expected_token.decode() != token:
             return Response({"error": "Invalid token or lead expired"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -148,7 +147,7 @@ class LeadDecisionView(APIView):
             assignment.save()
 
             # Store rejected user in Redis
-            redis_client.rpush(f"lead:{lead_id}:rejected_users", str(assignment.user.id))
+            redis_client.rpush(f"lead:{lead_id}:rejected_users", str(user_id))  # Use user_id here instead of assignment.user.supabase_uid
 
             # Reassign the lead to the next available user
             self.reassign_lead(lead)
@@ -174,14 +173,14 @@ class LeadDecisionView(APIView):
         rejected_users = [uid.decode() for uid in rejected_users]
 
         # Find the next available user
-        next_user = next((u for u in matching_users if str(u.id) not in rejected_users), None)
+        next_user = next((u for u in matching_users if str(u.supabase_uid) not in rejected_users), None)
 
         if next_user:
             lead.status = "pending"  # Mark lead as pending again
             lead.save()
 
             lead_id = str(lead.id)
-            user_id = str(next_user.id)
+            user_id = str(next_user.supabase_uid)  # Use supabase_uid here instead of id
             token = str(uuid.uuid4())
 
             redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)

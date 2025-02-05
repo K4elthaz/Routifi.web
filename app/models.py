@@ -15,11 +15,11 @@ class UserProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)  # Many-to-Many with Tags
-    availability = models.JSONField(default=list)  # Store list of available days (e.g. [0, 1, 2])
+    availability = models.JSONField(default=list)
 
     def clean(self):
         """ Custom validation to ensure user is available on the current day """
-        current_day = datetime.now().weekday()  # 0 = Monday, 6 = Sunday
+        current_day = datetime.now().weekday()
         if current_day not in self.availability:
             raise ValidationError(f"User is not available today ({current_day})")
 
