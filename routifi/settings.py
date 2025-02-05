@@ -13,7 +13,10 @@ import dj_database_url
 import environ
 import os
 from pathlib import Path
+import redis
 
+redis_client = redis.StrictRedis.from_url("redis://localhost:6379")
+print(redis_client.ping())
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,7 +32,7 @@ ALLOWED_HOSTS = ['*']
 
 CORS_ALLOW_ALL_ORIGINS = True
 
-REDIS_URL = "redis-18143.c114.us-east-1-4.ec2.redns.redis-cloud.com:18143"
+REDIS_URL = "redis://localhost:6379/0"
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -40,7 +43,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',  
     'app',
     'corsheaders',
-    'channels',
 ]
 
 MIDDLEWARE = [
@@ -106,6 +108,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.yourprovider.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "your-email@example.com"
+EMAIL_HOST_PASSWORD = "your-password"
 
 LANGUAGE_CODE = 'en-us'
 

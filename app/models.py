@@ -7,11 +7,11 @@ from datetime import datetime
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
     supabase_uid = models.CharField(max_length=255, unique=True, primary_key=True)
-    first_name = models.CharField(max_length=100, blank=True, null=True)
-    last_name = models.CharField(max_length=100, blank=True, null=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    location = models.CharField(max_length=255, blank=True, null=True)
+    location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)  # Many-to-Many with Tags
@@ -100,3 +100,18 @@ class Settings(models.Model):
             if other_settings.exists():
                 raise ValueError("Only one organization can have 'one_to_one' set to True.")
         super().save(*args, **kwargs)
+
+class LeadAssignment(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="assignments")
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="lead_assignments")
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected")],
+        default="pending",
+    )
+    lead_link = models.URLField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.lead.name} -> {self.user.email} ({self.status})"
