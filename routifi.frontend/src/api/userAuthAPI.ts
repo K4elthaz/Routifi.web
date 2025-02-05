@@ -5,7 +5,7 @@ import { UserData, LoginResponse, VerifyTokenResponse } from "@/types/auth";
 // Register User
 export const registerUser = async (userData: UserData): Promise<any> => {
   try {
-    const response = await api.post("/user/", userData);
+    const response = await api.post("/app/user/", userData);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Registration failed";
