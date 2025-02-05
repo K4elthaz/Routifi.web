@@ -127,6 +127,7 @@ def verify_supabase_token(request):
             "id": response.user.id,
             "email": response.user.email,
             "full_name": response.user.user_metadata.get("full_name", ""),
+            "location": response.user.user_metadata.get("location", []),
             # Add any other relevant fields from the user object
         }
 
