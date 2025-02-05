@@ -5,6 +5,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import MobileLeads from "./pages/mobile-leads";
 import Index from "./pages/landing-page";
 import Login from "./pages/login";
+import Signup from "./pages/register";
 
 function AppContent() {
   return (
@@ -13,6 +14,7 @@ function AppContent() {
         <Route path="/" element={<Index />} />
         <Route path="/mobile-leads" element={<MobileLeads />} />
         <Route path="/sign-in" element={<Login />} />
+        <Route path="/sign-up" element={<Signup />} />
       </Routes>
     </>
   );
