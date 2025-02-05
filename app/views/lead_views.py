@@ -97,6 +97,37 @@ class LeadView(APIView):
 
             print(f"Lead assigned to {user.email}: {lead_link}") 
 
+    # def get(self, request, slug):
+    #     """Retrieve leads for an organization, user must be authenticated and authorized."""
+    #     response = verify_supabase_token(request)
+
+    #     if response.status_code != 200:
+    #         return response
+
+    #     try:
+    #         user_data = json.loads(response.content).get('user', {})
+    #     except json.JSONDecodeError:
+    #         return Response({"error": "Error decoding token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+    #     user_id = user_data.get('id')
+
+    #     organization = get_object_or_404(Organization, slug=slug)
+
+    #     user_profile = UserProfile.objects.filter(supabase_uid=user_id).first()
+    #     if not user_profile:
+    #         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    #     is_owner = organization.created_by == user_profile
+    #     is_member = Membership.objects.filter(user=user_profile, organization=organization, accepted=True).exists()
+
+    #     if not (is_owner or is_member):
+    #         return Response({"error": "User does not have permission to view leads for this organization"},
+    #                         status=status.HTTP_403_FORBIDDEN)
+
+    #     leads = Lead.objects.filter(organization=organization)
+    #     serializer = LeadSerializer(leads, many=True)
+    #     return Response(serializer.data)
+
 
 class LeadDecisionView(APIView):
     def post(self, request, lead_id, token):
