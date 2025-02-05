@@ -11,17 +11,25 @@ class UserProfile(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    location = models.CharField(max_length=255)
+    location = models.JSONField(default=list)  # Store [latitude, longitude]
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    tags = models.ManyToManyField("Tag", related_name="users", blank=True)  # Many-to-Many with Tags
+    tags = models.ManyToManyField("Tag", related_name="users", blank=True)
     availability = models.JSONField(default=list)
 
     def clean(self):
-        """ Custom validation to ensure user is available on the current day """
+        """Custom validation to ensure user is available on the current day"""
         current_day = datetime.now().weekday()
         if current_day not in self.availability:
             raise ValidationError(f"User is not available today ({current_day})")
+
+        # Validate location format
+        if not isinstance(self.location, list) or len(self.location) != 2:
+            raise ValidationError("Location must be a list with two elements: [latitude, longitude]")
+
+        lat, lon = self.location
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            raise ValidationError("Invalid latitude or longitude values")
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.supabase_uid})"
