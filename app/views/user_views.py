@@ -15,8 +15,7 @@ class UserProfileView(APIView):
         """
         email = request.data.get("email")
         password = request.data.get("password")  # Ensure the user provides a password for Supabase
-        first_name = request.data.get("first_name")
-        last_name = request.data.get("last_name")
+        full_name = request.data.get("full_name")
         date_of_birth = request.data.get("date_of_birth")
 
         if not email or not password:
@@ -44,8 +43,7 @@ class UserProfileView(APIView):
             user_data = {
                 "supabase_uid": supabase_uid,
                 "email": email,
-                "first_name": first_name,
-                "last_name": last_name,
+                "full_name": full_name,
                 "date_of_birth": date_of_birth,
             }
 
@@ -128,8 +126,7 @@ def verify_supabase_token(request):
         user_data = {
             "id": response.user.id,
             "email": response.user.email,
-            "first_name": response.user.user_metadata.get("first_name", ""),
-            "last_name": response.user.user_metadata.get("last_name", ""),
+            "full_name": response.user.user_metadata.get("full_name", ""),
             # Add any other relevant fields from the user object
         }
 

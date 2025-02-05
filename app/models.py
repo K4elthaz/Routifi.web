@@ -7,8 +7,7 @@ from datetime import datetime
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
     supabase_uid = models.CharField(max_length=255, unique=True, primary_key=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     date_of_birth = models.DateField(blank=True, null=True)
     location = models.JSONField(default=list)  # Store [latitude, longitude]
@@ -32,7 +31,7 @@ class UserProfile(models.Model):
             raise ValidationError("Invalid latitude or longitude values")
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.supabase_uid})"
+        return f"{self.full_name} ({self.supabase_uid})"
 
 class Organization(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
