@@ -29,7 +29,7 @@ export function CreateOrgForm() {
       <DialogTrigger asChild>
         <Button variant="outline">
           <PlusIcon className="w-4 h-4 mr-2" />
-          Create
+          Create Organization
         </Button>
       </DialogTrigger>
 
