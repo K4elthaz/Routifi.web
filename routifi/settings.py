@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',  
     'app',
     'corsheaders',
+    'channels'
 ]
 
 MIDDLEWARE = [

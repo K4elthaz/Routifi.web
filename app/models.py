@@ -3,6 +3,7 @@ from django.utils.text import slugify
 import uuid
 from django.core.exceptions import ValidationError
 from datetime import datetime
+from django.utils import timezone
 
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
@@ -109,15 +110,30 @@ class Settings(models.Model):
 
 class LeadAssignment(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
-    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="assignments")
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="lead_assignments")
+    lead = models.ForeignKey("Lead", on_delete=models.CASCADE, related_name="assignments")
+    user = models.ForeignKey("UserProfile", on_delete=models.CASCADE, related_name="lead_assignments")
     assigned_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
         max_length=20,
-        choices=[("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected")],
+        choices=[("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected"), ("expired", "Expired")],
         default="pending",
     )
     lead_link = models.URLField(blank=True, null=True)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    expires_at = models.DateTimeField()
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+class LeadHistory(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="history")
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="user_lead_history")
+    user_choice = models.CharField(max_length=20)
+    user_response_time = models.PositiveIntegerField(null=True, blank=True)  # In minutes
+    action = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)  # This can be used to track the timestamp
 
     def __str__(self):
-        return f"{self.lead.name} -> {self.user.email} ({self.status})"
+        return f"{self.lead.name} -> {self.user.email} ({self.action})"
+

@@ -2,19 +2,19 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from ..models import Lead, Organization, UserProfile, Membership, Settings, LeadAssignment
+from ..models import Lead, Organization, UserProfile, Membership, Settings, LeadAssignment, LeadHistory
 from ..serializers.lead_serializers import LeadSerializer
 from ..views.user_views import verify_supabase_token
 from django.conf import settings
 from datetime import timedelta
 from django.utils import timezone
-from django.core.mail import send_mail
 import json
 import redis
 import uuid
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
-
 
 class LeadView(APIView):
     def post(self, request):
@@ -41,13 +41,13 @@ class LeadView(APIView):
         serializer = LeadSerializer(data=data)
         if serializer.is_valid():
             lead = serializer.save()
+            # Add the user field here to create LeadHistory entry with user
+            LeadHistory.objects.create(lead=lead, action="created", user=user_profile)  # Add user here
             self._send_lead_to_users(lead, organization)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def _send_lead_to_users(self, lead, organization):
-        """Assign lead to users and store generated links."""
-
         current_day = timezone.now().weekday()
 
         users = UserProfile.objects.filter(
@@ -59,8 +59,6 @@ class LeadView(APIView):
             if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
             and current_day in user.availability
         ]
-
-        print(f"Users to assign lead: {[user.email for user in matching_users]}")
 
         settings = Settings.objects.filter(organization=organization).first()
         if settings and settings.one_to_one and matching_users:
@@ -74,65 +72,56 @@ class LeadView(APIView):
             else:
                 return  
 
-        for user in matching_users:
-            lead_id = str(lead.id)
-            user_id = str(user.supabase_uid)
-            token = str(uuid.uuid4())
+        # Queue the lead assignment
+        redis_client.rpush(f"lead:{lead.id}:queue", *[str(user.supabase_uid) for user in matching_users])
+        # Send the first lead in the queue to a user
+        self.assign_next_lead_from_queue(lead)
 
-            redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)
-            print(f"Generated token for lead {lead.id}, user {user.email}: {token}")
+    def assign_next_lead_from_queue(self, lead):
+        # Pop the next user from the queue and assign the lead
+        user_id = redis_client.lpop(f"lead:{lead.id}:queue")
+        if user_id:
+            user = UserProfile.objects.get(supabase_uid=user_id.decode())
+            self.assign_lead_to_user(lead, user)
 
-            lead_link = f"http://localhost:8000/lead/{lead_id}/accept/{token}/"
+    def assign_lead_to_user(self, lead, user):
+        lead_id = str(lead.id)
+        user_id = str(user.supabase_uid)
+        token = str(uuid.uuid4())
 
-            try:
-                LeadAssignment.objects.create(
-                    lead=lead,
-                    user=user,
-                    assigned_at=timezone.now(),
-                    status="pending",
-                    lead_link=lead_link
-                )
-            except Exception as e:
-                print(f"Error creating LeadAssignment: {e}")
+        redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)
 
-            print(f"Lead assigned to {user.email}: {lead_link}") 
+        lead_link = f"http://localhost:8000/lead/{lead_id}/accept/{token}/"
 
-    # def get(self, request, slug):
-    #     """Retrieve leads for an organization, user must be authenticated and authorized."""
-    #     response = verify_supabase_token(request)
+        expires_at = timezone.now() + timedelta(minutes=10)
 
-    #     if response.status_code != 200:
-    #         return response
+        LeadAssignment.objects.create(
+            lead=lead,
+            user=user,
+            assigned_at=timezone.now(),
+            status="pending",
+            lead_link=lead_link,
+            expires_at=expires_at  # Add this line
+        )
 
-    #     try:
-    #         user_data = json.loads(response.content).get('user', {})
-    #     except json.JSONDecodeError:
-    #         return Response({"error": "Error decoding token response"}, status=status.HTTP_400_BAD_REQUEST)
+        # No need to add timestamp here as created_at will capture it automatically
+        LeadHistory.objects.create(lead=lead, user=user, action="assigned")  # Remove timestamp
 
-    #     user_id = user_data.get('id')
-
-    #     organization = get_object_or_404(Organization, slug=slug)
-
-    #     user_profile = UserProfile.objects.filter(supabase_uid=user_id).first()
-    #     if not user_profile:
-    #         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    #     is_owner = organization.created_by == user_profile
-    #     is_member = Membership.objects.filter(user=user_profile, organization=organization, accepted=True).exists()
-
-    #     if not (is_owner or is_member):
-    #         return Response({"error": "User does not have permission to view leads for this organization"},
-    #                         status=status.HTTP_403_FORBIDDEN)
-
-    #     leads = Lead.objects.filter(organization=organization)
-    #     serializer = LeadSerializer(leads, many=True)
-    #     return Response(serializer.data)
-
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"org_{lead.organization.id}",
+            {
+                "type": "send.lead",
+                "lead_id": lead_id,
+                "user_id": user_id,
+                "lead_link": lead_link,
+                "token": token
+            }
+        )
 
 class LeadDecisionView(APIView):
     def post(self, request, lead_id, token):
         lead = get_object_or_404(Lead, id=lead_id)
-
         response = verify_supabase_token(request)
         if response.status_code != 200:
             return response
@@ -154,62 +143,41 @@ class LeadDecisionView(APIView):
 
         decision = request.data.get("decision")
 
+        # Calculate response time in minutes
+        time_taken = timezone.now() - assignment.assigned_at
+        response_time_minutes = time_taken.total_seconds() // 60  # Convert to minutes
+        response_time_minutes = min(response_time_minutes, 10)  # Cap at 10 minutes
+
         if decision == "accept":
             lead.status = "accepted"
             lead.save()
-
             assignment.status = "accepted"
             assignment.save()
 
+            # Create LeadHistory entry for 'accept'
+            LeadHistory.objects.create(
+                lead=lead,
+                user=assignment.user,
+                action="accepted",
+                user_response_time=response_time_minutes
+            )
+            self.assign_next_lead_from_queue(lead)
             return Response({"message": "Lead accepted"}, status=status.HTTP_200_OK)
 
         elif decision == "reject":
             assignment.status = "rejected"
             assignment.save()
 
+            # Create LeadHistory entry for 'reject'
+            LeadHistory.objects.create(
+                lead=lead,
+                user=assignment.user,
+                action="rejected",
+                user_response_time=response_time_minutes
+            )
+
             redis_client.rpush(f"lead:{lead_id}:rejected_users", str(user_id)) 
-
-            self.reassign_lead(lead)
-
+            self.assign_next_lead_from_queue(lead)
             return Response({"message": "Lead rejected and reassigned"}, status=status.HTTP_200_OK)
 
         return Response({"error": "Invalid decision"}, status=status.HTTP_400_BAD_REQUEST)
-
-    def reassign_lead(self, lead):
-        """Find the next user and reassign the lead."""
-        organization = lead.organization
-        users = UserProfile.objects.filter(
-            memberships__organization=organization, memberships__accepted=True
-        )
-
-        matching_users = [
-            user for user in users
-            if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
-        ]
-
-        rejected_users = redis_client.lrange(f"lead:{lead.id}:rejected_users", 0, -1)
-        rejected_users = [uid.decode() for uid in rejected_users]
-
-        next_user = next((u for u in matching_users if str(u.supabase_uid) not in rejected_users), None)
-
-        if next_user:
-            lead.status = "pending"
-            lead.save()
-
-            lead_id = str(lead.id)
-            user_id = str(next_user.supabase_uid)
-            token = str(uuid.uuid4())
-
-            redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)
-
-            lead_link = f"http://localhost:8000/lead/{lead_id}/accept/{token}/"
-
-            LeadAssignment.objects.create(
-                lead=lead,
-                user=next_user,
-                assigned_at=timezone.now(),
-                status="pending",
-                lead_link=lead_link
-            )
-
-            print(f"Lead reassigned to {next_user.email}: {lead_link}")

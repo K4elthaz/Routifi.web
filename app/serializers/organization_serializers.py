@@ -13,7 +13,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     def get_members(self, obj):
         # Ensure you're filtering by accepted members
         members = obj.members.filter(accepted=True)
-        return [{"id": m.user.supabase_uid, "name": f"{m.user.first_name} {m.user.last_name}", "email": m.user.email, "role": m.role} for m in members]
+        return [{"id": m.user.supabase_uid, "name": f"{m.user.full_name}", "email": m.user.email, "role": m.role} for m in members]
 
     def to_representation(self, instance):
         """Customize response based on user role."""
