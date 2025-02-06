@@ -45,7 +45,12 @@ class Organization(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)  # Auto-generate slug from name
+            self.slug = slugify(self.name)
+            original_slug = self.slug
+            counter = 1
+            while Organization.objects.filter(slug=self.slug).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -119,7 +124,6 @@ class LeadAssignment(models.Model):
         default="pending",
     )
     lead_link = models.URLField(blank=True, null=True)
-    token = models.UUIDField(default=uuid.uuid4, editable=False)
     expires_at = models.DateTimeField()
 
     def is_expired(self):

@@ -13,8 +13,19 @@ import redis
 import uuid
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from ..tasks import assign_lead_to_user, process_lead_decision
+import logging
+from uuid import UUID
 
 redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
+logger = logging.getLogger(__name__)
+
+
+class LeadView(APIView):
+    from uuid import UUID
+import logging
+
+logger = logging.getLogger(__name__)
 
 class LeadView(APIView):
     def post(self, request):
@@ -41,83 +52,23 @@ class LeadView(APIView):
         serializer = LeadSerializer(data=data)
         if serializer.is_valid():
             lead = serializer.save()
-            # Add the user field here to create LeadHistory entry with user
-            LeadHistory.objects.create(lead=lead, action="created", user=user_profile)  # Add user here
-            self._send_lead_to_users(lead, organization)
+
+            # Ensure lead.id is a valid UUID before passing to Celery
+            try:
+                lead_id = str(lead.id)  # Ensure it's a string of UUID
+                UUID(lead_id)  # This will raise an error if it's not a valid UUID
+                logger.info(f"Created valid lead ID: {lead.id}")
+            except ValueError:
+                logger.error(f"Invalid lead ID format: {lead.id}")
+                return Response({"error": "Invalid lead ID format"}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Delegate lead assignment to Celery task
+            logger.info(f"Calling Celery task with lead.id: {lead.id} (UUID: {str(lead.id)})")
+            assign_lead_to_user.apply_async(args=[lead_id, str(organization.id)])
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def _send_lead_to_users(self, lead, organization):
-        current_day = timezone.now().weekday()
-
-        users = UserProfile.objects.filter(
-            memberships__organization=organization, memberships__accepted=True
-        )
-
-        matching_users = [
-            user for user in users
-            if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
-            and current_day in user.availability
-        ]
-
-        settings = Settings.objects.filter(organization=organization).first()
-        if settings and settings.one_to_one and matching_users:
-            rejected_users = redis_client.lrange(f"lead:{lead.id}:rejected_users", 0, -1)
-            rejected_users = [uid.decode() for uid in rejected_users]
-
-            next_user = next((u for u in matching_users if str(u.supabase_uid) not in rejected_users), None)
-
-            if next_user:
-                matching_users = [next_user]  
-            else:
-                return  
-
-        # Queue the lead assignment
-        redis_client.rpush(f"lead:{lead.id}:queue", *[str(user.supabase_uid) for user in matching_users])
-        # Send the first lead in the queue to a user
-        self.assign_next_lead_from_queue(lead)
-
-    def assign_next_lead_from_queue(self, lead):
-        # Pop the next user from the queue and assign the lead
-        user_id = redis_client.lpop(f"lead:{lead.id}:queue")
-        if user_id:
-            user = UserProfile.objects.get(supabase_uid=user_id.decode())
-            self.assign_lead_to_user(lead, user)
-
-    def assign_lead_to_user(self, lead, user):
-        lead_id = str(lead.id)
-        user_id = str(user.supabase_uid)
-        token = str(uuid.uuid4())
-
-        redis_client.setex(f"lead:{lead_id}:user:{user_id}:token", timedelta(minutes=10), token)
-
-        lead_link = f"http://localhost:8000/lead/{lead_id}/accept/{token}/"
-
-        expires_at = timezone.now() + timedelta(minutes=10)
-
-        LeadAssignment.objects.create(
-            lead=lead,
-            user=user,
-            assigned_at=timezone.now(),
-            status="pending",
-            lead_link=lead_link,
-            expires_at=expires_at  # Add this line
-        )
-
-        # No need to add timestamp here as created_at will capture it automatically
-        LeadHistory.objects.create(lead=lead, user=user, action="assigned")  # Remove timestamp
-
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"org_{lead.organization.id}",
-            {
-                "type": "send.lead",
-                "lead_id": lead_id,
-                "user_id": user_id,
-                "lead_link": lead_link,
-                "token": token
-            }
-        )
 
 class LeadDecisionView(APIView):
     def post(self, request, lead_id, token):
@@ -148,36 +99,53 @@ class LeadDecisionView(APIView):
         response_time_minutes = time_taken.total_seconds() // 60  # Convert to minutes
         response_time_minutes = min(response_time_minutes, 10)  # Cap at 10 minutes
 
-        if decision == "accept":
-            lead.status = "accepted"
-            lead.save()
-            assignment.status = "accepted"
-            assignment.save()
+        # Delegate decision processing to Celery
+        process_lead_decision.apply_async(args=[lead.id, user_id, decision, response_time_minutes, token])
 
-            # Create LeadHistory entry for 'accept'
-            LeadHistory.objects.create(
-                lead=lead,
-                user=assignment.user,
-                action="accepted",
-                user_response_time=response_time_minutes
-            )
-            self.assign_next_lead_from_queue(lead)
-            return Response({"message": "Lead accepted"}, status=status.HTTP_200_OK)
+        return Response({"message": f"Lead {decision} and reassigned"}, status=status.HTTP_200_OK)
 
-        elif decision == "reject":
-            assignment.status = "rejected"
-            assignment.save()
+class UserLeadsView(APIView):
+    def get(self, request, supabase_uid):
+        user = get_object_or_404(UserProfile, supabase_uid=supabase_uid)
+        
+        # Retrieve leads assigned to the user with their status (pending, accepted, rejected)
+        lead_assignments = LeadAssignment.objects.filter(user=user)
+        
+        leads_data = []
+        for assignment in lead_assignments:
+            lead = assignment.lead
+            leads_data.append({
+                "lead_id": str(lead.id),
+                "status": assignment.status,
+                "assigned_at": assignment.assigned_at,
+                "expires_at": assignment.expires_at
+            })
 
-            # Create LeadHistory entry for 'reject'
-            LeadHistory.objects.create(
-                lead=lead,
-                user=assignment.user,
-                action="rejected",
-                user_response_time=response_time_minutes
-            )
+        return Response({"leads": leads_data}, status=status.HTTP_200_OK)
 
-            redis_client.rpush(f"lead:{lead_id}:rejected_users", str(user_id)) 
-            self.assign_next_lead_from_queue(lead)
-            return Response({"message": "Lead rejected and reassigned"}, status=status.HTTP_200_OK)
+class OrganizationLeadsView(APIView):
+    def get(self, request, org_id):
+        organization = get_object_or_404(Organization, id=org_id)
+        
+        # Retrieve all leads associated with the organization
+        leads = Lead.objects.filter(organization=organization)
 
-        return Response({"error": "Invalid decision"}, status=status.HTTP_400_BAD_REQUEST)
+        leads_data = []
+        for lead in leads:
+            lead_assignments = LeadAssignment.objects.filter(lead=lead)
+            assignment_data = []
+            for assignment in lead_assignments:
+                assignment_data.append({
+                    "user": assignment.user.supabase_uid,
+                    "status": assignment.status,
+                    "assigned_at": assignment.assigned_at,
+                    "expires_at": assignment.expires_at
+                })
+            
+            leads_data.append({
+                "lead_id": str(lead.id),
+                "status": lead.status,
+                "assigned_to": assignment_data
+            })
+
+        return Response({"leads": leads_data}, status=status.HTTP_200_OK)
