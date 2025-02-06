@@ -29,7 +29,7 @@ export function CreateOrgForm() {
       <DialogTrigger asChild>
         <Button variant="outline">
           <PlusIcon className="w-4 h-4 mr-2" />
-          Create
+          Create Organization
         </Button>
       </DialogTrigger>
 
@@ -59,23 +59,6 @@ export function CreateOrgForm() {
                   </FormControl>
                   <FormDescription>
                     This is your organization&apos;s visible name.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="organization-id" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A unique identifier for your organization. Use lowercase
-                    letters, numbers, and hyphens only.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

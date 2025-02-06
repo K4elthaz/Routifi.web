@@ -3,7 +3,6 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { Link } from "react-router-dom";
 import useAuthStore from "@/store/authStore";
 import { CreateOrgForm } from "@/components/landing/create-org";
-import { JoinOrgForm } from "@/components/landing/join-org";
 
 export default function Index() {
   const { user } = useAuthStore();
@@ -40,7 +39,6 @@ export default function Index() {
                 <ModeToggle />
                 <div className="flex gap-2 justify-center items-center">
                   <CreateOrgForm />
-                  <JoinOrgForm />
                 </div>
               </div>
             </div>
