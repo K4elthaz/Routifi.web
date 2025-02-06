@@ -66,23 +66,6 @@ export function CreateOrgForm() {
             />
             <FormField
               control={form.control}
-              name="slug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization ID</FormLabel>
-                  <FormControl>
-                    <Input placeholder="organization-id" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    A unique identifier for your organization. Use lowercase
-                    letters, numbers, and hyphens only.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
