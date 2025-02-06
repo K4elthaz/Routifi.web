@@ -47,28 +47,50 @@ class LeadView(APIView):
         if not provided_api_key or provided_api_key != organization.api_key:
             return Response({"error": "Invalid API Key"}, status=status.HTTP_403_FORBIDDEN)
 
-        data = request.data
-        data["organization"] = organization.id  
-        serializer = LeadSerializer(data=data)
-        if serializer.is_valid():
-            lead = serializer.save()
+        data = request.data  # Assuming data is a list of leads
+        if not isinstance(data, list):
+            return Response({"error": "Expected a list of leads"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Ensure lead.id is a valid UUID before passing to Celery
-            try:
-                lead_id = str(lead.id)  # Ensure it's a string of UUID
-                UUID(lead_id)  # This will raise an error if it's not a valid UUID
-                logger.info(f"Created valid lead ID: {lead.id}")
-            except ValueError:
-                logger.error(f"Invalid lead ID format: {lead.id}")
-                return Response({"error": "Invalid lead ID format"}, status=status.HTTP_400_BAD_REQUEST)
+        # Initialize an empty list to store responses for all the leads
+        created_leads = []
+        failed_leads = []
 
-            # Delegate lead assignment to Celery task
-            logger.info(f"Calling Celery task with lead.id: {lead.id} (UUID: {str(lead.id)})")
-            assign_lead_to_user.apply_async(args=[lead_id, str(organization.id)])
+        for lead_data in data:
+            lead_data["organization"] = organization.id
+            serializer = LeadSerializer(data=lead_data)
+            if serializer.is_valid():
+                lead = serializer.save()
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+                # Ensure lead.id is a valid UUID before passing to Celery
+                try:
+                    lead_id = str(lead.id)  # Ensure it's a string of UUID
+                    UUID(lead_id)  # This will raise an error if it's not a valid UUID
+                    logger.info(f"Created valid lead ID: {lead.id}")
+                except ValueError:
+                    logger.error(f"Invalid lead ID format: {lead.id}")
+                    failed_leads.append({"data": lead_data, "error": "Invalid lead ID format"})
+                    continue
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                # Delegate lead assignment to Celery task
+                logger.info(f"Calling Celery task with lead.id: {lead.id} (UUID: {str(lead.id)})")
+                assign_lead_to_user.apply_async(args=[lead_id, str(organization.id)])
+
+                created_leads.append(serializer.data)
+            else:
+                failed_leads.append({"data": lead_data, "error": serializer.errors})
+
+        # Return a response that includes successfully created leads and failed ones
+        response_data = {
+            "created_leads": created_leads,
+            "failed_leads": failed_leads
+        }
+
+        # If there were any failed leads, return 400 with the details
+        if failed_leads:
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
 
 class LeadDecisionView(APIView):
     def post(self, request, lead_id, token):
@@ -88,9 +110,13 @@ class LeadDecisionView(APIView):
         if not assignment:
             return Response({"error": "No pending lead assignment found"}, status=status.HTTP_400_BAD_REQUEST)
 
-        expected_token = redis_client.get(f"lead:{lead_id}:user:{user_id}:token")  
-        if not expected_token or expected_token.decode() != token:
-            return Response({"error": "Invalid token or lead expired"}, status=status.HTTP_400_BAD_REQUEST)
+        token_key = f"lead:{lead_id}:user:{user_id}:token"
+        expected_token = redis_client.get(token_key)
+
+        if not expected_token:
+            logger.error(f"Token missing for lead {lead_id}, user {user_id}")
+            return Response({"error": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
 
         decision = request.data.get("decision")
 

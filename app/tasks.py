@@ -14,32 +14,57 @@ redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
 # Set up logging
 logger = logging.getLogger(__name__)
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+import re
+
+@shared_task(bind=True, default_retry_delay=60)
 def assign_next_lead_from_queue(self, lead_id):
     try:
-        # Validate lead_id as UUID
+        # Convert lead_id to string before attempting UUID conversion
+        lead_id = str(lead_id)  # Ensure it's a string first
+        logger.info(f"Lead ID received for processing: {lead_id} (Type: {type(lead_id)})")
+
+        # Check if the lead_id is a valid UUID format
+        if not re.match(r'^[a-f0-9\-]{36}$', lead_id):  # Simple regex for UUID validation
+            logger.error(f"Invalid UUID format: {lead_id}")
+            return  # Exit without retrying
+
         try:
-            lead_uuid = UUID(lead_id)  # This will raise an error if it's not a valid UUID
-        except ValueError:
-            logger.error(f"Invalid lead_id provided: {lead_id}. The ID should be in UUID format.")
+            # Convert to UUID after ensuring lead_id is a valid string UUID
+            lead_uuid = UUID(lead_id)  # Ensure it's a valid UUID
+        except ValueError as e:
+            logger.error(f"Error converting lead_id {lead_id} to UUID: {e}")
+            return  # Exit without retrying
+
+        # Fetch the next user from Redis queue
+        user_id = redis_client.lpop(f"lead:{lead_uuid}:queue")
+        
+        if not user_id:
+            logger.info(f"No users found in queue for lead {lead_uuid}, retrying in 30 seconds...")
+            raise self.retry(countdown=30)  # Retry after 30 seconds if queue is empty
+
+        # Process user ID
+        user_id = user_id.decode()
+        user = UserProfile.objects.get(supabase_uid=user_id)
+
+        # Get the organization via Membership model
+        membership = user.memberships.filter(accepted=True).first()
+        if not membership:
+            logger.error(f"User {user_id} is not a member of any accepted organization.")
             return
 
-        # Pop the next user from the queue and assign the lead
-        user_id = redis_client.lpop(f"lead:{lead_id}:queue")
-        if user_id:
-            user = UserProfile.objects.get(supabase_uid=user_id.decode())
-            
-            # Get the organization of the user via the Membership model
-            membership = user.memberships.filter(accepted=True).first()
-            if not membership:
-                logger.error(f"User {user_id} is not a member of any accepted organization.")
-                return
-            
-            organization = membership.organization
-            assign_lead_to_user.apply_async(args=[str(lead_id), str(organization.id)])
+        organization = membership.organization
+
+        # Assign the lead asynchronously
+        assign_lead_to_user.apply_async(args=[str(lead_uuid), str(organization.id)])
+
+    except UserProfile.DoesNotExist:
+        logger.error(f"User with supabase_uid {user_id} does not exist.")
+        raise self.retry(countdown=60)  # Retry after delay if user lookup fails
+
     except Exception as e:
         logger.error(f"Error in assign_next_lead_from_queue: {e}")
-        raise self.retry(exc=e)  # Retry the task
+        raise self.retry(exc=e)  # Retry on unexpected errors
+
 
 @shared_task
 def assign_lead_to_user(lead_id, organization_id):
@@ -102,15 +127,19 @@ def assign_lead_to_user(lead_id, organization_id):
             token = str(uuid.uuid4())  # Generate a unique token
             link = f"http://localhost:8000/app/leads/{lead.id}/decision/{token}/"
             assignment = LeadAssignment.objects.create(
-                lead=lead, 
-                user=user, 
-                status="pending", 
+                lead=lead,
+                user=user,
+                status="pending",
+                assigned_at=timezone.now(),  # Ensure this is set
                 expires_at=expires_at,
-                lead_link=link  # Correctly assign the link here
+                lead_link=link
             )
 
-            # Store the token in Redis
-            redis_client.set(f"lead:{lead.id}:user:{user.supabase_uid}:token", token, ex=expires_at)
+            expires_at = timezone.now() + timedelta(minutes=10)  # Set expiration time
+            expiry_seconds = int((expires_at - timezone.now()).total_seconds())  # Convert to seconds
+
+            redis_client.set(f"lead:{lead.id}:user:{user.supabase_uid}:token", token, ex=expiry_seconds)
+
             # Assuming lead_link should be linked with the LeadHistory, create the LeadHistory
             LeadHistory.objects.create(lead=lead, user=user, action="assigned")
 
@@ -124,11 +153,12 @@ def assign_lead_to_user(lead_id, organization_id):
 
 @shared_task
 def process_lead_decision(lead_id, user_id, decision, response_time_minutes, token):
+    
     try:
         lead = Lead.objects.get(id=lead_id)
         user = UserProfile.objects.get(supabase_uid=user_id)
 
-        assignment = LeadAssignment.objects.filter(lead=lead, user=user, status="pending").first()
+        assignment = LeadAssignment.objects.filter(lead=lead, user__supabase_uid=user_id, status="pending").first()
         if not assignment:
             logger.error(f"No pending lead assignment found for lead {lead_id} and user {user_id}.")
             return
@@ -164,7 +194,11 @@ def process_lead_decision(lead_id, user_id, decision, response_time_minutes, tok
 @shared_task
 def expire_unaccepted_leads():
     try:
-        unaccepted_leads = Lead.objects.filter(status="pending", created_at__lte=timezone.now() - timezone.timedelta(hours=1))  # Assuming leads older than 1 hour are expired
+        unaccepted_leads = Lead.objects.filter(
+            assignments__status="pending",
+            assignments__assigned_at__lte=timezone.now() - timedelta(minutes=10)
+        ).distinct()
+
         
         for lead in unaccepted_leads:
             lead.status = "expired"
