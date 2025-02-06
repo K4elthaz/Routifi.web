@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Link } from "react-router-dom";
 import useAuthStore from "@/store/authStore";
+import { CreateOrgForm } from "@/components/landing/create-org";
+import { JoinOrgForm } from "@/components/landing/join-org";
 
 export default function Index() {
   const { user } = useAuthStore();
@@ -37,12 +39,8 @@ export default function Index() {
               <div className="flex w-full lg:max-w-md justify-center gap-2">
                 <ModeToggle />
                 <div className="flex gap-2 justify-center items-center">
-                  <Button size="sm" variant="outline">
-                    Create Org
-                  </Button>
-                  <Button size="sm" variant="default">
-                    Join Org
-                  </Button>
+                  <CreateOrgForm />
+                  <JoinOrgForm />
                 </div>
               </div>
             </div>

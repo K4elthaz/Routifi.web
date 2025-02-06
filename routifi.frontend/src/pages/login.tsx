@@ -5,6 +5,7 @@ import { useState } from "react";
 import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
 import { Link, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const { setUser, setTokens } = useAuthStore();
@@ -12,6 +13,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,8 +25,17 @@ export default function Login() {
       setUser(response.user);
       setTokens(response.access_token, response.refresh_token);
       navigate("/");
+      toast({
+        title: "Login Successful",
+        description: "Welcome to routifi",
+      });
     } catch (err) {
       setError(err as string);
+      toast({
+        title: "Login Failed",
+        description:
+          "There was an error during login. Please check your credentials and try again.",
+      });
     }
   };
 
