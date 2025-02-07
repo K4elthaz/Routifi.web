@@ -8,6 +8,7 @@ import MobileLeads from "./pages/mobile-leads";
 import Index from "./pages/landing-page";
 import Login from "./pages/login";
 import Signup from "./pages/register";
+import OrgnaizationParent from "./pages/org-layout-page";
 
 function AppContent() {
   return (
@@ -17,6 +18,7 @@ function AppContent() {
         <Route path="/mobile-leads" element={<MobileLeads />} />
         <Route path="/sign-in" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
+        <Route path="/org" element={<OrgnaizationParent />} />
       </Routes>
     </>
   );

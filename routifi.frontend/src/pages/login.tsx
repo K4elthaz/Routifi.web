@@ -27,7 +27,7 @@ export default function Login() {
       navigate("/");
       toast({
         title: "Login Successful",
-        description: "Welcome to routifi",
+        description: "Welcome to Routifi app!",
       });
     } catch (err) {
       setError(err as string);
