@@ -12,6 +12,9 @@ import OrgnaizationParent from "./pages/org-layout-page";
 import Dashboard from "./components/dashboard/dashboard-page";
 import Leads from "./components/leads/leads-page";
 import Users from "./components/users/users-page";
+import Maps from "./components/maps/maps-page";
+import Tags from "./components/tags/tags-page";
+import Settings from "./components/settings/settings-page";
 
 function AppContent() {
   return (
@@ -26,6 +29,9 @@ function AppContent() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
           <Route path="users" element={<Users />} />
+          <Route path="maps" element={<Maps />} />
+          <Route path="tags" element={<Tags />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </>

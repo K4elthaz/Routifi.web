@@ -1,4 +1,4 @@
-import { Home, Users2, User, MapPin } from "lucide-react";
+import { Home, Users2, User, MapPin, Tags, Settings } from "lucide-react";
 
 export const navItems = [
   {
@@ -20,6 +20,18 @@ export const navItems = [
     title: "Maps",
     href: "/org/maps",
     icon: MapPin,
+  },
+  {
+    title: "Tags",
+    href: "/org/tags",
+    icon: Tags,
+    ownerOnly: true,
+  },
+  {
+    title: "Settings",
+    href: "/org/settings",
+    icon: Settings,
+    ownerOnly: true,
   },
 ];
 
