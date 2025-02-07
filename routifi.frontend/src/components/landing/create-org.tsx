@@ -94,7 +94,9 @@ export function CreateOrgForm() {
                     <Input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png"
-                      onChange={(e) => field.onChange(e.target.files[0])}
+                      onChange={(e) =>
+                        e.target.files && field.onChange(e.target.files[0])
+                      }
                     />
                   </FormControl>
                   <FormDescription>

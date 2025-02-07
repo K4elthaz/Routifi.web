@@ -3,22 +3,22 @@ import { Home, Users2, User, MapPin } from "lucide-react";
 export const navItems = [
   {
     title: "Dashboard",
-    href: "/org/{slug}",
+    href: "/org/dashboard",
     icon: Home,
   },
   {
     title: "Leads",
-    href: "/org/{slug}/leads",
+    href: "/org/leads",
     icon: Users2,
   },
   {
     title: "Users",
-    href: "/org/{slug}/users",
+    href: "/org/users",
     icon: User,
   },
   {
     title: "Maps",
-    href: "/org/{slug}/maps",
+    href: "/org/maps",
     icon: MapPin,
   },
 ];

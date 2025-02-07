@@ -9,6 +9,9 @@ import Index from "./pages/landing-page";
 import Login from "./pages/login";
 import Signup from "./pages/register";
 import OrgnaizationParent from "./pages/org-layout-page";
+import Dashboard from "./components/dashboard/dashboard-page";
+import Leads from "./components/leads/leads-page";
+import Users from "./components/users/users-page";
 
 function AppContent() {
   return (
@@ -18,7 +21,12 @@ function AppContent() {
         <Route path="/mobile-leads" element={<MobileLeads />} />
         <Route path="/sign-in" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
-        <Route path="/org" element={<OrgnaizationParent />} />
+        <Route path="/org" element={<OrgnaizationParent />}>
+          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="users" element={<Users />} />
+        </Route>
       </Routes>
     </>
   );
