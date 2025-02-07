@@ -45,12 +45,12 @@ class Organization(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
-            original_slug = self.slug
+            base_slug = slugify(self.name)
             counter = 1
-            while Organization.objects.filter(slug=self.slug).exists():
-                self.slug = f"{original_slug}-{counter}"
+            while Organization.objects.filter(slug=base_slug).exists():
+                base_slug = f"{slugify(self.name)}-{counter}"
                 counter += 1
+            self.slug = base_slug
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -72,13 +72,15 @@ class Membership(models.Model):
     accepted = models.BooleanField(default=False)  # True when the user accepts the invite
 
     class Meta:
-        unique_together = ("user", "organization")  # A user cannot join the same org twice
+        constraints = [
+            models.UniqueConstraint(fields=["user", "organization"], name="unique_membership")
+        ]
 
     def __str__(self):
         return f"{self.user.email} - {self.organization.name} ({self.role})"
 
 class Tag(models.Model):
-    """A tag that can be assigned to users and leads."""
+    """A tag that can be assigned to users"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="tags")
     name = models.CharField(max_length=50)
@@ -91,11 +93,11 @@ class Lead(models.Model):
     organization = models.ForeignKey("Organization", on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     email = models.EmailField()
-    phone = models.CharField(max_length=50, blank=True, null=True)
-    location = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=50)
+    location = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.JSONField(blank=True, null=True)  # Store tags as a list of strings
-
+    tags = models.JSONField(default=list)
+    
     def __str__(self):
         return f"{self.name} - {self.organization.name}"
 
@@ -141,3 +143,9 @@ class LeadHistory(models.Model):
     def __str__(self):
         return f"{self.lead.name} -> {self.user.email} ({self.action})"
 
+class LeadsInQueue(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name="leads_in_queue")
+
+    def __str__(self):
+        return f"Lead in Queue: {self.lead.name}"
