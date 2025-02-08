@@ -1,151 +1,172 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from ..models import Lead, Organization, UserProfile, Membership, Settings, LeadAssignment, LeadHistory
-from ..serializers.lead_serializers import LeadSerializer
-from ..views.user_views import verify_supabase_token
-from django.conf import settings
-from datetime import timedelta
+from rest_framework.views import APIView
+from django.http import JsonResponse
 from django.utils import timezone
-import json
+from ..models import Lead, Organization, LeadsInQueue, LeadAssignment
+from ..serializers.lead_serializers import LeadSerializer
 import redis
-import uuid
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
-from ..tasks import assign_lead_to_user, process_lead_decision
-import logging
-from uuid import UUID
+from django.conf import settings
+from datetime import datetime
 
+# Initialize Redis client
 redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
-logger = logging.getLogger(__name__)
+
+class LeadCreateView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Step 1: Retrieve the API key from the headers
+        api_key = request.headers.get('X-API-KEY')
+        if not api_key:
+            return JsonResponse({"error": "API key is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 2: Validate the organization using the API key
+        try:
+            organization = get_object_or_404(Organization, api_key=api_key)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Step 3: Retrieve the lead data from the request body
+        lead_data = request.data
+        if not isinstance(lead_data, list):  # Ensure it's an array of leads
+            return JsonResponse({"error": "Expected an array of lead data"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        leads = []  # List of successfully created lead objects
+        redis_leads = []  # List of lead ids to push to Redis queue
+        failed_leads = []  # List to store leads that failed during validation
+        
+        # Sanitizing the organization slug to make it Redis-compatible
+        def sanitize_slug(slug):
+            if not slug:
+                return "unknown_org"
+            return slug.replace(' ', '_').lower()
+
+        # Redis queue name specific to the organization's slug
+        redis_queue_name = f"leads_queue:{sanitize_slug(organization.slug)}"
+
+        for lead in lead_data:
+            # Ensure the organization field is added to the lead data before validation
+            lead['organization'] = organization.id  # Ensure this is done correctly, possibly inside the serializer
+
+            # Using the lead serializer to validate and save the lead
+            serializer = LeadSerializer(data=lead, context={'organization': organization})
+
+            if serializer.is_valid():
+                new_lead = serializer.save()  # Save lead with tags handled by the serializer
+                leads.append(new_lead)
+
+                # Add the successfully created lead to LeadsInQueue
+                lead_in_queue = LeadsInQueue(lead=new_lead)
+                lead_in_queue.save()
+
+                # Add the lead's ID to the list to push to the Redis queue
+                redis_leads.append(str(new_lead.id))
+            else:
+                failed_leads.append(serializer.errors)
+
+        # Push leads to Redis queue if there are any
+        try:
+            if redis_leads:
+                redis_client.rpush(redis_queue_name, *redis_leads)
+        except redis.exceptions.ConnectionError as e:
+            return JsonResponse({"error": f"Failed to push leads to Redis queue: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Return the response with successful and failed lead details
+        if failed_leads:
+            return JsonResponse(
+                {
+                    "message": f"{len(leads)} leads have been successfully created for organization {organization.name}.",
+                    "failed_leads": failed_leads,
+                    "leads": [lead.id for lead in leads],
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return JsonResponse(
+            {
+                "message": f"{len(leads)} leads have been successfully created for organization {organization.name}.",
+                "leads": [lead.id for lead in leads],
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
-class LeadView(APIView):
-    from uuid import UUID
-import logging
-
-logger = logging.getLogger(__name__)
-
-class LeadView(APIView):
-    def post(self, request):
-        response = verify_supabase_token(request)
-        if response.status_code != 200:
-            return response  
+class LeadAssignmentView(APIView):
+    def accept_or_reject_lead(self, request, lead_id):
+        token = request.GET.get('token')
+        if not token:
+            return JsonResponse({"error": "Missing token."}, status=400)
 
         try:
-            user_data = json.loads(response.content).get('user', {})
-        except json.JSONDecodeError:
-            return Response({"error": "Error decoding token response"}, status=status.HTTP_400_BAD_REQUEST)
+            lead_assignment = get_object_or_404(LeadAssignment, lead_id=lead_id, token=token)
+        except LeadAssignment.DoesNotExist:
+            return JsonResponse({"error": "Lead assignment not found or invalid token."}, status=404)
 
-        user_id = user_data.get('id')
-        user_profile = get_object_or_404(UserProfile, supabase_uid=user_id)
+        # Ensure the assignment is still pending
+        if lead_assignment.status != "pending":
+            return JsonResponse({"error": "This lead has already been accepted or rejected."}, status=400)
 
-        organization = get_object_or_404(Organization, created_by=user_profile)
+        # Check if the lead assignment is expired
+        if lead_assignment.expires_at < timezone.now():
+            # If expired, do not allow rejection, return a response
+            LeadHistory.objects.create(
+                lead=lead_assignment.lead,
+                user=lead_assignment.user,
+                action="expired",
+                user_choice="none",
+                user_response_time=10  # Expiry time of 10 minutes
+            )
+            lead_assignment.status = "expired"
+            lead_assignment.save()
 
-        provided_api_key = request.headers.get("X-API-KEY")
-        if not provided_api_key or provided_api_key != organization.api_key:
-            return Response({"error": "Invalid API Key"}, status=status.HTTP_403_FORBIDDEN)
+            return JsonResponse({"error": "This lead has expired and cannot be rejected."}, status=400)
 
-        data = request.data
-        data["organization"] = organization.id  
-        serializer = LeadSerializer(data=data)
-        if serializer.is_valid():
-            lead = serializer.save()
+        action = request.data.get('action')
+        if action not in ['accept', 'reject']:
+            return JsonResponse({"error": "Invalid action. Must be 'accept' or 'reject'."}, status=400)
 
-            # Ensure lead.id is a valid UUID before passing to Celery
-            try:
-                lead_id = str(lead.id)  # Ensure it's a string of UUID
-                UUID(lead_id)  # This will raise an error if it's not a valid UUID
-                logger.info(f"Created valid lead ID: {lead.id}")
-            except ValueError:
-                logger.error(f"Invalid lead ID format: {lead.id}")
-                return Response({"error": "Invalid lead ID format"}, status=status.HTTP_400_BAD_REQUEST)
+        # Handle acceptance
+        if action == 'accept':
+            lead_assignment.status = 'accepted'
+            lead_assignment.accepted_at = timezone.now()
+            lead_assignment.save()
 
-            # Delegate lead assignment to Celery task
-            logger.info(f"Calling Celery task with lead.id: {lead.id} (UUID: {str(lead.id)})")
-            assign_lead_to_user.apply_async(args=[lead_id, str(organization.id)])
+            # Update LeadHistory
+            LeadHistory.objects.create(
+                lead=lead_assignment.lead,
+                user=lead_assignment.user,
+                action="accepted",
+                user_choice="accepted",
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60  # Response time in minutes
+            )
 
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # After accepting the lead, delete the token from Redis
+            redis_client.delete(f"lead_token:{lead_id}")
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({"message": "Lead accepted."}, status=200)
 
-class LeadDecisionView(APIView):
-    def post(self, request, lead_id, token):
-        lead = get_object_or_404(Lead, id=lead_id)
-        response = verify_supabase_token(request)
-        if response.status_code != 200:
-            return response
-        
-        try:
-            user_data = json.loads(response.content).get('user', {})
-        except json.JSONDecodeError:
-            return Response({"error": "Error decoding token response"}, status=status.HTTP_400_BAD_REQUEST)
+        # Handle rejection
+        elif action == 'reject':
+            lead_assignment.status = 'rejected'
+            lead_assignment.rejected_at = timezone.now()
+            lead_assignment.save()
 
-        user_id = str(user_data.get('id'))
+            # Update LeadHistory
+            LeadHistory.objects.create(
+                lead=lead_assignment.lead,
+                user=lead_assignment.user,
+                action="rejected",
+                user_choice="rejected",
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60  # Response time in minutes
+            )
 
-        assignment = LeadAssignment.objects.filter(lead=lead, user__supabase_uid=user_id, status="pending").first()
-        if not assignment:
-            return Response({"error": "No pending lead assignment found"}, status=status.HTTP_400_BAD_REQUEST)
+            # After rejecting, delete the token and re-add the lead to the Redis queue
+            redis_client.delete(f"lead_token:{lead_id}")
 
-        expected_token = redis_client.get(f"lead:{lead_id}:user:{user_id}:token")  
-        if not expected_token or expected_token.decode() != token:
-            return Response({"error": "Invalid token or lead expired"}, status=status.HTTP_400_BAD_REQUEST)
+            redis_queue_name = f"leads_queue:{lead_assignment.lead.organization.slug.replace(' ', '_').lower()}"
+            redis_client.rpush(redis_queue_name, str(lead_assignment.lead.id))
 
-        decision = request.data.get("decision")
+            return JsonResponse({"message": "Lead rejected and re-added to the queue."}, status=200)
 
-        # Calculate response time in minutes
-        time_taken = timezone.now() - assignment.assigned_at
-        response_time_minutes = time_taken.total_seconds() // 60  # Convert to minutes
-        response_time_minutes = min(response_time_minutes, 10)  # Cap at 10 minutes
+        return JsonResponse({"error": "Invalid action."}, status=400)
 
-        # Delegate decision processing to Celery
-        process_lead_decision.apply_async(args=[lead.id, user_id, decision, response_time_minutes, token])
 
-        return Response({"message": f"Lead {decision} and reassigned"}, status=status.HTTP_200_OK)
-
-class UserLeadsView(APIView):
-    def get(self, request, supabase_uid):
-        user = get_object_or_404(UserProfile, supabase_uid=supabase_uid)
-        
-        # Retrieve leads assigned to the user with their status (pending, accepted, rejected)
-        lead_assignments = LeadAssignment.objects.filter(user=user)
-        
-        leads_data = []
-        for assignment in lead_assignments:
-            lead = assignment.lead
-            leads_data.append({
-                "lead_id": str(lead.id),
-                "status": assignment.status,
-                "assigned_at": assignment.assigned_at,
-                "expires_at": assignment.expires_at
-            })
-
-        return Response({"leads": leads_data}, status=status.HTTP_200_OK)
-
-class OrganizationLeadsView(APIView):
-    def get(self, request, org_id):
-        organization = get_object_or_404(Organization, id=org_id)
-        
-        # Retrieve all leads associated with the organization
-        leads = Lead.objects.filter(organization=organization)
-
-        leads_data = []
-        for lead in leads:
-            lead_assignments = LeadAssignment.objects.filter(lead=lead)
-            assignment_data = []
-            for assignment in lead_assignments:
-                assignment_data.append({
-                    "user": assignment.user.supabase_uid,
-                    "status": assignment.status,
-                    "assigned_at": assignment.assigned_at,
-                    "expires_at": assignment.expires_at
-                })
-            
-            leads_data.append({
-                "lead_id": str(lead.id),
-                "status": lead.status,
-                "assigned_to": assignment_data
-            })
-
-        return Response({"leads": leads_data}, status=status.HTTP_200_OK)

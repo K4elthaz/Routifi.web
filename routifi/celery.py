@@ -1,27 +1,36 @@
 import os
+import django
 from celery import Celery
 from celery.schedules import crontab
 from django.conf import settings
+from datetime import timedelta
 
-# Set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'routifi.settings')
+# Set up Django environment for Celery
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "routifi.settings")
+django.setup()
 
-# Initialize the Celery app
+# Initialize Celery app
 app = Celery('routifi')
 
-# Load task modules from all registered Django apps
+# Use Redis as broker and backend
 app.config_from_object('django.conf:settings', namespace='CELERY')
-
-# Auto-discover tasks from Django apps, including your app (e.g. app)
+app.conf.worker_pool = 'solo'
+# Auto-discover tasks
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 
-# Set the worker pool to solo (useful for debugging, but not recommended for production)
-app.conf.worker_pool = 'solo'
-
-# Celery Beat schedule (Periodic tasks)
+# Configure Celery Beat tasks
 app.conf.beat_schedule = {
-    'expire-unaccepted-leads': {
-        'task': 'app.tasks.expire_unaccepted_leads',  # Correct task path
-        'schedule': crontab(minute='*/10'),  # Runs every 10 minutes
+    'assign-leads-every-minute': {
+        'task': 'app.tasks.assign_leads_to_members',  # Use the correct app name!
+        'schedule': crontab(minute='*/1'),
+    },
+        'check-expired-leads': {
+        'task': 'app.tasks.check_expired_lead_assignments',
+        'schedule': timedelta(minutes=1),  # Runs every minute
     },
 }
+
+@app.task(bind=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')
+
