@@ -1,5 +1,4 @@
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +36,6 @@ export function CreateOrgForm() {
   });
   const { setOrgData } = useOrganizationStore();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   const handleCreateOrg = async (data: OrgData) => {
     try {
@@ -48,7 +46,6 @@ export function CreateOrgForm() {
         // logo: data.logo,
       });
       form.reset();
-      navigate("/org/");
       toast({
         title: "Organization Created",
         description: "Your organization has been created successfully.",
