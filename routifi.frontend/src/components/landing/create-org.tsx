@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +22,42 @@ import {
 import { PlusIcon } from "lucide-react";
 import { DialogTitle } from "@radix-ui/react-dialog";
 
+import { useOrganizationStore } from "@/store/organizationStore";
+import { OrgData } from "@/types/organization";
+import { createOrganization } from "@/api/organizationAPI";
+
+import { useToast } from "@/hooks/use-toast";
+
 export function CreateOrgForm() {
-  const form = useForm();
+  const form = useForm<OrgData>({
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+  const { setOrgData } = useOrganizationStore();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleCreateOrg = async (data: OrgData) => {
+    try {
+      setOrgData(data);
+      const response = await createOrganization({
+        name: data.name,
+        description: data.description,
+        // logo: data.logo,
+      });
+      form.reset();
+      navigate("/org/");
+      toast({
+        title: "Organization Created",
+        description: "Your organization has been created successfully.",
+      });
+      console.log(response);
+    } catch (error) {
+      console.error("Error creating organization:", error);
+    }
+  };
 
   return (
     <Dialog>
@@ -45,7 +80,7 @@ export function CreateOrgForm() {
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((data) => console.log(data))}
+            onSubmit={form.handleSubmit(handleCreateOrg)}
             className="space-y-8"
           >
             <FormField
@@ -84,7 +119,7 @@ export function CreateOrgForm() {
                 </FormItem>
               )}
             />
-            <FormField
+            {/* <FormField
               control={form.control}
               name="logo"
               render={({ field }) => (
@@ -106,7 +141,7 @@ export function CreateOrgForm() {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
             <DialogFooter>
               <Button type="submit">Create Organization</Button>
             </DialogFooter>

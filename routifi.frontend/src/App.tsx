@@ -8,6 +8,7 @@ import MobileLeads from "./pages/mobile-leads";
 import Index from "./pages/landing-page";
 import Login from "./pages/login";
 import Signup from "./pages/register";
+
 import OrgnaizationParent from "./pages/org-layout-page";
 import Dashboard from "./components/dashboard/dashboard-page";
 import Leads from "./components/leads/leads-page";
