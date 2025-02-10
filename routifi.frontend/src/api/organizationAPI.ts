@@ -51,7 +51,7 @@ export const inviteUserToOrganization = async (
   email: string
 ): Promise<{ message: string }> => {
   try {
-    const response = await api.post(`/organization/${orgId}/invite/`, {
+    const response = await api.post(`/app/${orgId}/invite/`, {
       email,
     });
     return response.data;

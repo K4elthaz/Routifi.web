@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
 import { GetOrganziationData, OrgData } from "../types/organization";
-import { createOrganization, getOrganizations } from "../api/organizationAPI";
+import {
+  createOrganization,
+  getOrganizations,
+  inviteUserToOrganization,
+} from "../api/organizationAPI";
 
 interface OrganizationStore {
   loading: boolean;
@@ -10,6 +14,7 @@ interface OrganizationStore {
   organizations: GetOrganziationData[];
   addOrganization: (orgData: OrgData) => Promise<void>;
   fetchOrganizations: () => Promise<void>;
+  inviteUser: (orgId: string, email: string) => Promise<void>;
 }
 
 export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
@@ -39,6 +44,17 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
       set({ organizations: data, loading: false });
     } catch (error) {
       set({ error: (error as any).message, loading: false });
+    }
+  },
+
+  inviteUser: async (organizationId: string, email: string) => {
+    set({ loading: true, error: null });
+    try {
+      await inviteUserToOrganization(organizationId, email);
+      set({ loading: false });
+    } catch (error) {
+      set({ error: (error as any).message, loading: false });
+      throw error;
     }
   },
 }));
