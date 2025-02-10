@@ -1,16 +1,14 @@
-/* eslint-disable no-empty-pattern */
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 
 import { DashboardNav } from "./nav";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-import { navItems } from "@/constants/nav";
+import { getNavItems } from "@/constants/nav";
 
-type SidebarProps = React.HTMLAttributes<HTMLDivElement>;
-
-export function MobileSidebar({}: SidebarProps) {
+export function MobileSidebar({ slug }: { slug?: string }) {
   const [open, setOpen] = useState(false);
+  const processedNavItems = slug ? getNavItems(slug) : [];
   return (
     <>
       <Sheet open={open} onOpenChange={setOpen}>
@@ -25,9 +23,10 @@ export function MobileSidebar({}: SidebarProps) {
               </h2>
               <div className="space-y-1">
                 <DashboardNav
-                  items={navItems}
+                  items={processedNavItems}
                   isMobileNav={true}
                   setOpen={setOpen}
+                  slug={slug}
                 />
               </div>
             </div>
