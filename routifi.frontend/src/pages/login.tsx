@@ -17,7 +17,7 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); // Clear any previous error
+    setError("");
 
     try {
       const response = await loginUser({ email, password });
