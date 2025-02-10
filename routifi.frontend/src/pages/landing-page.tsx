@@ -41,9 +41,6 @@ export default function Index() {
                 <ModeToggle />
                 <div className="flex gap-2 justify-center items-center">
                   <CreateOrgForm />
-                  <Button asChild size="sm" variant="default">
-                    <Link to="/org">View Organizations</Link>
-                  </Button>
                 </div>
               </div>
             </div>

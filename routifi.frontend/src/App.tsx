@@ -25,7 +25,7 @@ function AppContent() {
         <Route path="/mobile-leads" element={<MobileLeads />} />
         <Route path="/sign-in" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
-        <Route path="/org" element={<OrgnaizationParent />}>
+        <Route path="/org/:slug" element={<OrgnaizationParent />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
