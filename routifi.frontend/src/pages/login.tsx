@@ -17,14 +17,17 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError(""); // Clear any previous error
 
     try {
       const response = await loginUser({ email, password });
       console.log("Login successful:", response);
+
       setUser(response.user);
       setTokens(response.access_token, response.refresh_token);
+
       navigate("/");
+
       toast({
         title: "Login Successful",
         description: "Welcome to Routifi app!",

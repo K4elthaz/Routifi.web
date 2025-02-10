@@ -11,9 +11,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { logoutUser } from "@/api/userAuthAPI";
+import { useToast } from "@/hooks/use-toast";
 
 export default function NavUser() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    logoutUser();
+    navigate("/sign-in");
+
+    toast({
+      title: "Logout Successful",
+      description: "You have been successfully logged out.",
+    });
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -42,7 +57,12 @@ export default function NavUser() {
           </DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
         </DropdownMenuGroup>
-        <form>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLogout();
+          }}
+        >
           <DropdownMenuItem>
             <button type="submit" className="w-full text-start">
               Log out

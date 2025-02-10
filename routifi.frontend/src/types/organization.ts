@@ -10,4 +10,5 @@ export interface GetOrganziationData {
   slug: string;
   created_by: string;
   description: string;
+  members: string[];
 }
