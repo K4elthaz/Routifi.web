@@ -1,14 +1,16 @@
+import json
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from django.http import JsonResponse
 from django.utils import timezone
-from ..models import Lead, Organization, LeadsInQueue, LeadAssignment
+from ..models import Lead, Organization, LeadsInQueue, LeadAssignment, UserProfile, LeadHistory
 from ..serializers.lead_serializers import LeadSerializer
 import redis
 from django.conf import settings
 from datetime import datetime
-
+from ..views.user_views import verify_supabase_token
+from rest_framework.response import Response
 # Initialize Redis client
 redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
 
@@ -89,42 +91,77 @@ class LeadCreateView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
-
 class LeadAssignmentView(APIView):
-    def accept_or_reject_lead(self, request, lead_id):
-        token = request.GET.get('token')
-        if not token:
-            return JsonResponse({"error": "Missing token."}, status=400)
+    """ Handles lead acceptance and rejection """
+
+    def post(self, request, lead_id):
+    # Step 1: Verify the Supabase token
+        response = verify_supabase_token(request)
+
+        # Ensure response is valid
+        if response.status_code != 200:
+            return Response({"error": "Invalid Supabase token response"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            lead_assignment = get_object_or_404(LeadAssignment, lead_id=lead_id, token=token)
-        except LeadAssignment.DoesNotExist:
-            return JsonResponse({"error": "Lead assignment not found or invalid token."}, status=404)
+            user_data = json.loads(response.content)  # Convert JSON response to dictionary
+            user_data = user_data.get("user", {})  # Extract the 'user' key from the response
+        except Exception:
+            return Response({"error": "Failed to extract user data"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Ensure the assignment is still pending
+        # Check if 'id' exists in user_data
+        user_id = user_data.get("id")
+        if not user_id:
+            return Response({"error": "User ID missing in token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user_id)
+
+        # Step 2: Get token from query params
+        token = request.GET.get('token')
+        if not token:
+            return Response({"error": "Missing token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Step 3: Retrieve and validate token from Redis
+        redis_token_key = f"lead_token:{lead_id}"
+        stored_token = redis_client.get(redis_token_key)
+
+        if not stored_token:
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        stored_token = stored_token.decode("utf-8")
+
+        # Fetch the correct LeadAssignment using the Redis token
+        lead_assignment = get_object_or_404(LeadAssignment, lead_id=lead_id, status="pending")
+
+        # Ensure the token matches
+        if stored_token != token:
+            return Response({"error": "Token mismatch. The provided token does not match the stored token."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Ensure the lead belongs to theuser making the request
+        if lead_assignment.user != user_profile:
+            return Response({"error": "You are not authorized to accept this lead."}, status=status.HTTP_403_FORBIDDEN)
+
         if lead_assignment.status != "pending":
-            return JsonResponse({"error": "This lead has already been accepted or rejected."}, status=400)
+            return Response({"error": "This lead has already been accepted or rejected."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if the lead assignment is expired
+        # Step 5: Handle expiration check
         if lead_assignment.expires_at < timezone.now():
-            # If expired, do not allow rejection, return a response
-            LeadHistory.objects.create(
-                lead=lead_assignment.lead,
-                user=lead_assignment.user,
-                action="expired",
-                user_choice="none",
-                user_response_time=10  # Expiry time of 10 minutes
-            )
             lead_assignment.status = "expired"
             lead_assignment.save()
-
-            return JsonResponse({"error": "This lead has expired and cannot be rejected."}, status=400)
+            LeadHistory.objects.create(
+                lead=lead_assignment.lead,
+                user=user_profile,
+                action="expired",
+                user_choice="none",
+                user_response_time=10
+            )
+            return Response({"error": "This lead has expired and cannot be processed."}, status=status.HTTP_400_BAD_REQUEST)
 
         action = request.data.get('action')
         if action not in ['accept', 'reject']:
-            return JsonResponse({"error": "Invalid action. Must be 'accept' or 'reject'."}, status=400)
+            return Response({"error": "Invalid action. Must be 'accept' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Handle acceptance
+        # Step 6: Handle Acceptance
         if action == 'accept':
             lead_assignment.status = 'accepted'
             lead_assignment.accepted_at = timezone.now()
@@ -133,40 +170,38 @@ class LeadAssignmentView(APIView):
             # Update LeadHistory
             LeadHistory.objects.create(
                 lead=lead_assignment.lead,
-                user=lead_assignment.user,
+                user=user_profile,
                 action="accepted",
                 user_choice="accepted",
-                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60  # Response time in minutes
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60
             )
 
-            # After accepting the lead, delete the token from Redis
-            redis_client.delete(f"lead_token:{lead_id}")
+            # Assign the lead to the user's `LeadsOwned`
+            user_profile.LeadsOwned.add(lead_assignment.lead)
 
-            return JsonResponse({"message": "Lead accepted."}, status=200)
+            # Remove token from Redis
+            redis_client.delete(redis_token_key)
 
-        # Handle rejection
-        elif action == 'reject':
+            return Response({"message": "Lead accepted and added to your owned leads."}, status=status.HTTP_200_OK)
+
+        # Step 7: Handle Rejection
+        if action == 'reject':
             lead_assignment.status = 'rejected'
             lead_assignment.rejected_at = timezone.now()
             lead_assignment.save()
 
-            # Update LeadHistory
             LeadHistory.objects.create(
                 lead=lead_assignment.lead,
-                user=lead_assignment.user,
+                user=user_profile,
                 action="rejected",
                 user_choice="rejected",
-                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60  # Response time in minutes
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60
             )
 
-            # After rejecting, delete the token and re-add the lead to the Redis queue
-            redis_client.delete(f"lead_token:{lead_id}")
+            # Remove token and re-add lead to Redis queue
+            redis_client.delete(redis_token_key)
 
             redis_queue_name = f"leads_queue:{lead_assignment.lead.organization.slug.replace(' ', '_').lower()}"
             redis_client.rpush(redis_queue_name, str(lead_assignment.lead.id))
 
-            return JsonResponse({"message": "Lead rejected and re-added to the queue."}, status=200)
-
-        return JsonResponse({"error": "Invalid action."}, status=400)
-
-
+            return Response({"message": "Lead rejected and re-added to the queue."}, status=status.HTTP_200_OK)

@@ -15,7 +15,7 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)
     availability = models.JSONField(default=list)
-
+    LeadsOwned = models.ManyToManyField("Lead")
     def clean(self):
         """Custom validation to ensure user is available on the current day"""
         current_day = datetime.now().weekday()

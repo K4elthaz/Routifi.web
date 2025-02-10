@@ -2,6 +2,7 @@ from celery import shared_task
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
+from django.db import transaction
 from .models import Lead, LeadAssignment, Organization, UserProfile, LeadHistory
 import redis
 import logging
@@ -14,109 +15,123 @@ redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
 logger = logging.getLogger(__name__)
 
 @shared_task
-def assign_leads_to_members():
-    logger.info("Starting lead assignment task...")
+def assign_leads_to_members(batch_size=5):
+    logger.info("Starting batch lead assignment task...")
 
     organizations = Organization.objects.all()
 
     for organization in organizations:
         current_day = timezone.now().weekday()
 
+        # Skip organizations with pending lead assignments
+        if LeadAssignment.objects.filter(user__memberships__organization=organization, status="pending").exists():
+            logger.info(f"Skipping {organization.name}: pending leads exist.")
+            continue
+
         users = UserProfile.objects.filter(
             memberships__organization=organization,
             memberships__accepted=True
-        ).prefetch_related("tags").exclude(
-            lead_assignments__status="pending"
-        ).distinct()
+        ).prefetch_related("tags").distinct()
 
         redis_queue_name = f"leads_queue:{organization.slug.replace(' ', '_').lower()}"
-        
-        # Fetch one lead at a time from the Redis queue
-        lead_id = redis_client.lpop(redis_queue_name)  # lpop retrieves and removes the first element from the list
-        
-        if not lead_id:
+
+        # Fetch up to `batch_size` leads at once
+        lead_ids = redis_client.lrange(redis_queue_name, 0, batch_size - 1)
+
+        if not lead_ids:
             logger.info(f"No leads in queue for {organization.name}")
-            continue  # Skip this organization if no leads
-        
-        # Convert lead ID to UUID
-        lead = Lead.objects.get(id=uuid.UUID(lead_id.decode("utf-8")))
+            continue
 
-        # Ensure lead is not already assigned and is still unassigned
-        existing_assignment = LeadAssignment.objects.filter(lead=lead, status="pending").first()
-        if existing_assignment:
-            logger.info(f"Lead {lead.id} is already assigned and pending decision.")
-            continue  # Skip this lead if it's pending
+        leads = Lead.objects.filter(id__in=[uuid.UUID(l.decode("utf-8")) for l in lead_ids])
 
-        # Ensure the user has no pending lead assignments
-        matching_users = [
-            user for user in users
-            if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
-            and current_day in user.availability
-            and not LeadAssignment.objects.filter(user=user, status="pending").exists()  # Check for pending assignments
-        ]
+        assigned_leads = []
 
-        if not matching_users:
-            logger.info(f"No available users for lead {lead.id} in {organization.name}")
-            continue  # Skip this lead if no matching users
+        for lead in leads:
+            if LeadAssignment.objects.filter(lead=lead, status="pending").exists():
+                logger.info(f"Lead {lead.id} already assigned.")
+                continue
 
-        user = matching_users[0]  # Assign the lead to the first matching user
+            matching_users = [
+                user for user in users
+                if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
+                and current_day in user.availability
+                and not LeadAssignment.objects.filter(user=user, status="pending").exists()
+            ]
 
-        # Generate a unique token for the lead assignment
-        token = str(uuid.uuid4())
+            if not matching_users:
+                logger.info(f"No available users for lead {lead.id} in {organization.name}")
+                continue
 
-        # Store the token in Redis with a 10-minute expiry
-        redis_token_key = f"lead_token:{lead.id}"
-        redis_client.setex(redis_token_key, 600, token)  # Expiry in 600 seconds (10 minutes)
+            user = matching_users[0]  # Assign to the first available user
+            expires_at = timezone.now() + timedelta(minutes=10)
 
-        expires_at = timezone.now() + timedelta(minutes=10)
-        lead_assignment = LeadAssignment.objects.create(
-            lead=lead,
-            user=user,
-            expires_at=expires_at,
-            lead_link=f"/accept-lead/{lead.id}/?token={token}",
-            status="pending",  # Mark assignment as pending
-        )
+            # Generate a unique token for lead acceptance
+            token = str(uuid.uuid4())
 
-        LeadHistory.objects.create(
-            lead=lead,
-            user=user,
-            action="assigned",
-        )
+            with transaction.atomic():
+                LeadAssignment.objects.create(
+                    lead=lead,
+                    user=user,
+                    expires_at=expires_at,
+                    lead_link=f"/accept-lead/{lead.id}/?token={token}",
+                    status="pending",
+                )
 
-        logger.info(f"Assigned lead {lead.id} to {user.pk} with token {token}")
+                LeadHistory.objects.create(
+                    lead=lead,
+                    user=user,
+                    action="assigned",
+                )
 
-    logger.info("Lead assignment task completed.")
+            assigned_leads.append(lead.id)
+
+            # Store the token in Redis (No expiration, we track expiration in DB)
+            redis_token_key = f"lead_token:{lead.id}"
+            redis_client.set(redis_token_key, token)
+
+            # Remove the lead from the Redis queue after assignment
+            redis_client.lrem(redis_queue_name, 1, str(lead.id))
+
+            logger.info(f"Assigned lead {lead.id} to {user.pk} with token {token}")
+
+        logger.info(f"Assigned {len(assigned_leads)} leads for {organization.name}")
+
+    logger.info("Batch lead assignment task completed.")
 
 
 @shared_task
 def check_expired_lead_assignments():
+    logger.info("Checking for expired lead assignments...")
+
     expired_assignments = LeadAssignment.objects.filter(status="pending", expires_at__lt=timezone.now())
-    
+
+    if not expired_assignments.exists():
+        logger.info("No expired leads found.")
+        return
+
+    requeued_leads = []
+
     for assignment in expired_assignments:
-        # Mark the assignment as expired
-        assignment.status = "expired"
-        assignment.save()
+        with transaction.atomic():
+            assignment.status = "expired"
+            assignment.save()
 
-        # Update lead history when the assignment expires
-        LeadHistory.objects.create(
-            lead=assignment.lead,
-            user=assignment.user,
-            action="expired",
-            user_choice="passed",  # Since the lead expired, the user passed
-            user_response_time=10  # Since expiry is 10 minutes
-        )
+            LeadHistory.objects.create(
+                lead=assignment.lead,
+                user=assignment.user,
+                action="expired",
+                user_choice="passed",
+                user_response_time=10
+            )
 
-        # Log the expiration
-        logger.info(f"Lead {assignment.lead.id} expired for user {assignment.user.id}")
+            redis_queue_name = f"leads_queue:{assignment.lead.organization.slug.replace(' ', '_').lower()}"
 
-        # Push the lead back into the organization's Redis queue
-        redis_queue_name = f"leads_queue:{assignment.lead.organization.slug.replace(' ', '_').lower()}"
+            # Requeue lead only if it’s not already in Redis
+            if str(assignment.lead.id) not in redis_client.lrange(redis_queue_name, 0, -1):
+                redis_client.lpush(redis_queue_name, str(assignment.lead.id))
+                requeued_leads.append(assignment.lead.id)
 
-        # Re-add the lead ID to the Redis queue for this organization (only if it's not already in the queue)
-        redis_client.rpush(redis_queue_name, str(assignment.lead.id))  # Use rpush to add to the end of the list
-        
-        # Optionally, delete the token in Redis to reset the state for re-assignment
-        redis_token_key = f"lead_token:{assignment.lead.id}"
-        redis_client.delete(redis_token_key)  # Clean up the old token in Redis
+            logger.info(f"Lead {assignment.lead.id} expired and was requeued.")
 
+    logger.info(f"Requeued {len(requeued_leads)} expired leads.")
 

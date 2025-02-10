@@ -18,8 +18,8 @@ urlpatterns = [
 
     # Lead Endpoints
     path('leads/', LeadCreateView.as_view(), name='create-lead'),
-    path('leads/accept-or-reject/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='accept-or-reject-lead'),  # New endpoint for accepting or rejecting a lead
-    
+    path('leads/assignment/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='lead-assignment'),  # Updated endpoint
+
     # Tag Endpoints
     path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),
 ]
