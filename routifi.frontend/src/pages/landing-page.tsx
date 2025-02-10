@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Link } from "react-router-dom";
+
 import useAuthStore from "@/store/authStore";
 import { CreateOrgForm } from "@/components/landing/create-org";
+import OrganizationList from "@/components/landing/organization-list";
 
 export default function Index() {
   const { user } = useAuthStore();
@@ -60,6 +62,12 @@ export default function Index() {
           )}
         </div>
       </div>
+
+      {user && (
+        <div className="w-full max-w-7xl">
+          <OrganizationList />
+        </div>
+      )}
     </div>
   );
 }

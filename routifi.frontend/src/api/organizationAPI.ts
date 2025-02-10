@@ -1,19 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/utility/api";
-
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  created_by: string;
-}
+import { OrgData, GetOrganziationData } from "@/types/organization";
 
 // ✅ Create Organization (Authenticated)
-export const createOrganization = async (orgData: {
-  name: string;
-  description?: string;
-  // logo?: File | null;
-}): Promise<Organization> => {
+export const createOrganization = async (
+  orgData: OrgData
+): Promise<OrgData> => {
   try {
     const formData = new FormData();
     formData.append("name", orgData.name);
@@ -32,9 +24,9 @@ export const createOrganization = async (orgData: {
 };
 
 // ✅ Get Organizations for the Authenticated User
-export const getOrganizations = async (): Promise<Organization[]> => {
+export const getOrganizations = async (): Promise<GetOrganziationData[]> => {
   try {
-    const response = await api.get(`/organization/`);
+    const response = await api.get(`/app/organization/`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Failed to fetch organizations";
@@ -44,7 +36,7 @@ export const getOrganizations = async (): Promise<Organization[]> => {
 // ✅ Get Organization by Slug (Requires Authentication)
 export const getOrganizationBySlug = async (
   slug: string
-): Promise<Organization> => {
+): Promise<GetOrganziationData> => {
   try {
     const response = await api.get(`/organization/${slug}/`);
     return response.data;

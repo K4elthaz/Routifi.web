@@ -20,11 +20,11 @@ import {
 } from "@/components/ui/form";
 import { PlusIcon } from "lucide-react";
 import { DialogTitle } from "@radix-ui/react-dialog";
+import { useState } from "react";
 
 import { useOrganizationStore } from "@/store/organizationStore";
+import useLoadingStore from "@/store/loadingStore";
 import { OrgData } from "@/types/organization";
-import { createOrganization } from "@/api/organizationAPI";
-
 import { useToast } from "@/hooks/use-toast";
 
 export function CreateOrgForm() {
@@ -34,32 +34,32 @@ export function CreateOrgForm() {
       description: "",
     },
   });
-  const { setOrgData } = useOrganizationStore();
+  const { addOrganization } = useOrganizationStore();
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const { loading, setLoading } = useLoadingStore();
 
   const handleCreateOrg = async (data: OrgData) => {
     try {
-      setOrgData(data);
-      const response = await createOrganization({
-        name: data.name,
-        description: data.description,
-        // logo: data.logo,
-      });
+      setLoading(true);
+      await addOrganization(data);
       form.reset();
       toast({
         title: "Organization Created",
         description: "Your organization has been created successfully.",
       });
-      console.log(response);
+      setIsOpen(false);
     } catch (error) {
       console.error("Error creating organization:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" disabled={loading}>
           <PlusIcon className="w-4 h-4 mr-2" />
           Create Organization
         </Button>
@@ -140,7 +140,12 @@ export function CreateOrgForm() {
               )}
             /> */}
             <DialogFooter>
-              <Button type="submit">Create Organization</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <div className="animate-spin h-5 w-5 border-4 border-t-transparent border-black rounded-full mr-2" />
+                ) : null}
+                {loading ? "Creating..." : "Create Organization"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
