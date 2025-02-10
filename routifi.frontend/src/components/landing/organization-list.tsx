@@ -29,6 +29,12 @@ export default function OrganizationList() {
       </div>
     );
   }
+
+  const filteredOrganizations = organizations.filter(
+    (org) =>
+      org.created_by === user.supabase_uid || org.members.includes(user.uid)
+  );
+
   return (
     <Card className="w-full h-full">
       <CardHeader>
@@ -38,10 +44,10 @@ export default function OrganizationList() {
       </CardHeader>
       <CardContent className="items-center">
         <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 items-center text-g">
-          {organizations.length === 0 ? (
+          {filteredOrganizations.length === 0 ? (
             <p>No organizations found.</p>
           ) : (
-            organizations.map((org) => (
+            filteredOrganizations.map((org) => (
               <Link
                 key={org.id}
                 to={`/org/${org.slug}`}
