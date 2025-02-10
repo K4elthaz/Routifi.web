@@ -99,3 +99,31 @@ class AcceptInviteView(APIView):
         invite.accepted = True
         invite.save()
         return Response({"message": "Invite accepted"}, status=status.HTTP_200_OK)
+
+class OrganizationBySlugView(APIView):
+    def get(self, request, slug):
+        """Retrieve a specific organization by slug if the user is a member."""
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return Response({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return Response({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        # Fetch the organization by slug and check if the user is a member
+        org = get_object_or_404(Organization, slug=slug)
+        is_member = Membership.objects.filter(user=user_profile, organization=org, accepted=True).exists()
+        
+        if not is_member and org.created_by != user_profile:
+            return Response({"error": "You do not have access to this organization"}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = OrganizationSerializer(org, context={"user_profile": user_profile})
+        return Response(serializer.data, status=status.HTTP_200_OK)

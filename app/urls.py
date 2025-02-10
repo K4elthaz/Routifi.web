@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.user_views import UserProfileView, UserLoginView, verify_supabase_token
-from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView
+from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView, OrganizationBySlugView
 from .views.lead_views import LeadCreateView, LeadAssignmentView
 from .views.tag_views import TagView
 
@@ -15,6 +15,7 @@ urlpatterns = [
     path("organization/", OrganizationView.as_view(), name="organization-create"),
     path("<uuid:org_id>/invite/", InviteUserToOrganization.as_view(), name="invite-user"),
     path("invite/accept/<uuid:invite_id>/", AcceptInviteView.as_view(), name="accept-invite"),
+    path("<str:slug>/", OrganizationBySlugView.as_view(), name="organization-by-slug"),
 
     # Lead Endpoints
     path('leads/', LeadCreateView.as_view(), name='create-lead'),
