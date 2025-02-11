@@ -15,6 +15,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { logoutUser } from "@/api/userAuthAPI";
 import { useToast } from "@/hooks/use-toast";
 import useAuthStore from "@/store/authStore";
+import OrganizationList from "./organization-list";
 
 export default function NavUser() {
   const navigate = useNavigate();
@@ -83,6 +84,7 @@ export default function NavUser() {
               </p>
             </div>
           </DropdownMenuLabel>
+          <OrganizationList />
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
