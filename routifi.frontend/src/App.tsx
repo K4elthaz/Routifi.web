@@ -17,6 +17,8 @@ import Maps from "./components/maps/maps-page";
 import Tags from "./components/tags/tags-page";
 import Settings from "./components/settings/settings-page";
 
+import AccountSettings from "./pages/account-settings";
+
 function AppContent() {
   return (
     <>
@@ -34,6 +36,7 @@ function AppContent() {
           <Route path="tags" element={<Tags />} />
           <Route path="settings" element={<Settings />} />
         </Route>
+        <Route path="/account" element={<AccountSettings />} />
       </Routes>
     </>
   );
