@@ -38,7 +38,7 @@ export const getOrganizationBySlug = async (
   slug: string
 ): Promise<GetOrganziationData> => {
   try {
-    const response = await api.get(`/organization/${slug}/`);
+    const response = await api.get(`/app/organization/${slug}/`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Failed to fetch organization";
@@ -51,7 +51,7 @@ export const inviteUserToOrganization = async (
   email: string
 ): Promise<{ message: string }> => {
   try {
-    const response = await api.post(`/organization/${orgId}/invite/`, {
+    const response = await api.post(`/app/${orgId}/invite/`, {
       email,
     });
     return response.data;

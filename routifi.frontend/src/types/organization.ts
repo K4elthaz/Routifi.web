@@ -11,4 +11,5 @@ export interface GetOrganziationData {
   created_by: string;
   description: string;
   members: string[];
+  created_at: string;
 }

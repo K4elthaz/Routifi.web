@@ -14,10 +14,12 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { logoutUser } from "@/api/userAuthAPI";
 import { useToast } from "@/hooks/use-toast";
+import useAuthStore from "@/store/authStore";
 
 export default function NavUser() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuthStore();
 
   const handleLogout = () => {
     logoutUser();
@@ -46,7 +48,7 @@ export default function NavUser() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">Coach</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {/* {user?.email} */} Roland Celis
+              {user?.email}
             </p>
           </div>
         </DropdownMenuLabel>

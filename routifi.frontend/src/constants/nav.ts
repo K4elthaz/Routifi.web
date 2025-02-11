@@ -3,33 +3,33 @@ import { Home, Users2, User, MapPin, Tags, Settings } from "lucide-react";
 export const navItems = [
   {
     title: "Dashboard",
-    href: "/org/dashboard",
+    href: "/org/{slug}/dashboard",
     icon: Home,
   },
   {
     title: "Leads",
-    href: "/org/leads",
+    href: "/org/{slug}/leads",
     icon: Users2,
   },
   {
     title: "Users",
-    href: "/org/users",
+    href: "/org/{slug}/users",
     icon: User,
   },
   {
     title: "Maps",
-    href: "/org/maps",
+    href: "/org/{slug}/maps",
     icon: MapPin,
   },
   {
     title: "Tags",
-    href: "/org/tags",
+    href: "/org/{slug}/tags",
     icon: Tags,
     ownerOnly: true,
   },
   {
     title: "Settings",
-    href: "/org/settings",
+    href: "/org/{slug}/settings",
     icon: Settings,
     ownerOnly: true,
   },

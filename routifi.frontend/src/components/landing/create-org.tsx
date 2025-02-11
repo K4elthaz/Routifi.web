@@ -18,7 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Loader2 } from "lucide-react";
 import { DialogTitle } from "@radix-ui/react-dialog";
 import { useState } from "react";
 
@@ -141,9 +141,7 @@ export function CreateOrgForm() {
             /> */}
             <DialogFooter>
               <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <div className="animate-spin h-5 w-5 border-4 border-t-transparent border-black rounded-full mr-2" />
-                ) : null}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 {loading ? "Creating..." : "Create Organization"}
               </Button>
             </DialogFooter>

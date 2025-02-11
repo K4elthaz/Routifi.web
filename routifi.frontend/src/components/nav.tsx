@@ -16,6 +16,7 @@ interface DashboardNavProps {
   items: NavItem[];
   setOpen?: Dispatch<SetStateAction<boolean>>;
   isMobileNav?: boolean;
+  slug?: string;
 }
 
 export function DashboardNav({
