@@ -70,7 +70,7 @@ class Membership(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="member")
     invited_at = models.DateTimeField(auto_now_add=True)
     accepted = models.BooleanField(default=False)  # True when the user accepts the invite
-
+    invite_status = models.CharField(max_length=20, default="pending")
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "organization"], name="unique_membership")

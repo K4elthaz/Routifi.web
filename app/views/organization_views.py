@@ -76,7 +76,7 @@ class InviteUserToOrganization(APIView):
         user = get_object_or_404(UserProfile, email=email)
 
         invite, created = Membership.objects.get_or_create(
-            user=user, organization=org, defaults={"role": "member"}
+            user=user, organization=org, defaults={"role": "member", "invite_status": "pending"}
         )
 
         if not created and invite.accepted:
