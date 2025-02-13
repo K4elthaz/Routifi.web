@@ -13,34 +13,35 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 };
 
 // Login User
-export const loginUser = async (
-  credentials: UserData
-): Promise<LoginResponse> => {
+export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
   try {
-    const response = await api.post("/app/login/", credentials);
-    const { access_token, refresh_token, user } = response.data;
+    const response = await api.post("/app/login/", credentials, {
+      withCredentials: true,
+    });
 
-    localStorage.setItem("token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-
-    return { user, access_token, refresh_token };
+    return { user: response.data.user };
   } catch (error: any) {
     throw error.response?.data || "Login failed";
   }
 };
 
 // Logout User
-export const logoutUser = (): void => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refresh_token");
+export const logoutUser = async (): Promise<void> => {
+  try {
+    await api.post("/app/logout/", {}, { withCredentials: true });
+  } catch (error: any) {
+    throw error.response?.data || "Logout failed";
+  }
 };
+
 
 // Verify Token Function
 export const verifyToken = async (): Promise<VerifyTokenResponse> => {
   try {
-    const response = await api.get("/verify-token/");
+    const response = await api.get("/app/verify-token/", { withCredentials: true });
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Token verification failed";
   }
 };
+
