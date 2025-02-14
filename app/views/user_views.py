@@ -6,7 +6,6 @@ from ..serializers.user_serializers import UserProfileSerializer
 from ..supabase import create_supabase_client
 from django.http import JsonResponse
 
-
 supabase = create_supabase_client()
 
 class UserProfileView(APIView):
@@ -138,8 +137,13 @@ def verify_supabase_token(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=401)
 
+
+
 class UserLoginView(APIView):
     def post(self, request):
+        """
+        Authenticate a user using Supabase and return their profile data.
+        """
         email = request.data.get("email")
         password = request.data.get("password")
 
@@ -147,14 +151,13 @@ class UserLoginView(APIView):
             return Response({"error": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Authenticate with Supabase
-            auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            # Step 1: Authenticate with Supabase
+            response = supabase.auth.sign_in_with_password({"email": email, "password": password})
 
-            # Handle authentication errors
-            if auth_response and hasattr(auth_response, "errors") and auth_response.errors:
-                return Response({"error": auth_response.errors.message}, status=status.HTTP_400_BAD_REQUEST)
+            if response and hasattr(response, "errors") and response.errors:
+                return Response({"error": response.errors.message}, status=status.HTTP_400_BAD_REQUEST)
 
-            supabase_user = auth_response.user
+            supabase_user = response.user
             if not supabase_user:
                 return Response({"error": "Failed to retrieve user from Supabase"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -162,12 +165,15 @@ class UserLoginView(APIView):
             if not supabase_uid:
                 return Response({"error": "User ID missing from Supabase response"}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Step 2: Retrieve user profile from Django database
             try:
                 user_profile = UserProfile.objects.get(supabase_uid=supabase_uid)
             except UserProfile.DoesNotExist:
                 return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
+            # Step 3: Return user data and authentication token
             serializer = UserProfileSerializer(user_profile)
+<<<<<<< HEAD
 
             session_data = auth_response.session
             access_token = session_data.access_token if session_data else None
@@ -195,36 +201,13 @@ class UserLoginView(APIView):
             )
 
             return response
+=======
+            return Response({
+                "user": serializer.data,
+                "access_token": response.session.access_token,
+                "refresh_token": response.session.refresh_token
+            }, status=status.HTTP_200_OK)
+>>>>>>> parent of d44f72c (login cookies)
 
         except Exception as e:
             return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-class RefreshTokenView(APIView):
-    def post(self, request):
-        refresh_token = request.COOKIES.get("refresh_token")
-
-        if not refresh_token:
-            return Response({"error": "Refresh token is missing"}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            new_session = supabase.auth.refresh_session({"refresh_token": refresh_token})
-
-            if hasattr(new_session, "errors") and new_session.errors:
-                return Response({"error": new_session.errors.message}, status=status.HTTP_400_BAD_REQUEST)
-
-            response = JsonResponse({"message": "Token refreshed"}, status=200)
-            response.set_cookie("access_token", new_session.session.access_token, httponly=True, secure=True)
-            return response
-
-        except Exception as e:
-            return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class LogoutView(APIView):
-    def post(self, request):
-        response = JsonResponse({"message": "Logged out successfully"})
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
-        return response
-
-

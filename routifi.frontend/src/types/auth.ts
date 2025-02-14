@@ -9,6 +9,8 @@ export interface UserData {
 
 export interface LoginResponse {
   user: UserData;
+  access_token: string;
+  refresh_token: string;
 }
 
 export interface VerifyTokenResponse {

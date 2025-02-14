@@ -1,5 +1,5 @@
 from django.urls import path
-from .views.user_views import UserProfileView, UserLoginView, verify_supabase_token, RefreshTokenView, LogoutView
+from .views.user_views import UserProfileView, UserLoginView, verify_supabase_token
 from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView, OrganizationBySlugView
 from .views.lead_views import LeadCreateView, LeadAssignmentView
 from .views.tag_views import TagView
@@ -10,8 +10,6 @@ urlpatterns = [
     path("user/", UserProfileView.as_view(), name="user-profile-create"),
     path("login/", UserLoginView.as_view(), name="user-login"),
     path("verify-token/", verify_supabase_token, name="verify-token"),
-    path("refresh-token/", RefreshTokenView.as_view(), name="refresh-token"),
-    path("logout/", LogoutView.as_view(), name="logout"),
     
     # Organization Endpoints
     path("organization/", OrganizationView.as_view(), name="organization-create"),
