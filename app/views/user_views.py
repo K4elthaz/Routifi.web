@@ -173,41 +173,11 @@ class UserLoginView(APIView):
 
             # Step 3: Return user data and authentication token
             serializer = UserProfileSerializer(user_profile)
-<<<<<<< HEAD
-
-            session_data = auth_response.session
-            access_token = session_data.access_token if session_data else None
-            refresh_token = session_data.refresh_token if session_data else None
-
-
-            if not access_token or not refresh_token:
-                return Response({"error": "Failed to retrieve authentication tokens"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-            response = JsonResponse({"user": serializer.data, "access_token": access_token, "refresh_token": refresh_token}, status=200)
-
-            response.set_cookie(
-                "access_token", 
-                access_token,
-                httponly=True,
-                secure=True,
-                samesite="Lax"
-            )
-            response.set_cookie(
-                "refresh_token",
-                refresh_token,
-                httponly=True,
-                secure=True,
-                samesite="Lax"
-            )
-
-            return response
-=======
             return Response({
                 "user": serializer.data,
                 "access_token": response.session.access_token,
                 "refresh_token": response.session.refresh_token
             }, status=status.HTTP_200_OK)
->>>>>>> parent of d44f72c (login cookies)
 
         except Exception as e:
             return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
