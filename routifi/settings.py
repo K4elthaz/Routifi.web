@@ -105,13 +105,17 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
 
-# Email settings
+# Looking to send emails in production? Check out our Email API/SMTP product!
+# settings.py
+
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.yourprovider.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "your-email@example.com"
-EMAIL_HOST_PASSWORD = "your-password"
+EMAIL_HOST = "smtp.hostinger.com"
+EMAIL_PORT = 465  # Use 587 if TLS, 465 if SSL
+EMAIL_USE_TLS = False  # Use True if using port 587
+EMAIL_USE_SSL = True   # Use True if using port 465
+EMAIL_HOST_USER = "kael@fluxfusiondevsph.io"  # Your Hostinger email
+EMAIL_HOST_PASSWORD = "0pJ^FWHLC9B1%KA%"  # Your Hostinger email password
+DEFAULT_FROM_EMAIL = "kael@fluxfusiondevsph.io"
 
 # Language and timezone settings
 LANGUAGE_CODE = 'en-us'
