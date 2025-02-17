@@ -28,6 +28,16 @@ export function InviteButton({ organizationId }: InviteButtonProps) {
   const handleInvite = async () => {
     if (!email) return;
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       await inviteUser(organizationId, email);

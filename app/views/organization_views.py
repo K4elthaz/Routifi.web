@@ -86,7 +86,7 @@ class InviteUserToOrganization(APIView):
         send_mail(
             "Organization Invitation",
             f"You've been invited to join {org.name}. Accept your invite here: {invite_link}",
-            "no-reply@yourapp.com",
+            "kael@fluxfusiondevsph.io", 
             [email],
         )
 
