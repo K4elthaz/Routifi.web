@@ -16,14 +16,16 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 // authUserAPI.ts
 export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
   try {
-    const response = await api.post("/app/login/", credentials);
+    const response = await api.post("/app/login/", credentials, {
+      withCredentials: true, // ✅ Ensures cookies are stored in the browser
+    });
 
-    // The tokens are already set in cookies, no need to handle them here
     return response.data.user;
   } catch (error: any) {
     throw error.response?.data || "Login failed";
   }
 };
+
 
 // Logout User
 export const logoutUser = (): void => {

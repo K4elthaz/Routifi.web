@@ -173,34 +173,31 @@ class UserLoginView(APIView):
             serialized_user = UserProfileSerializer(user_profile)
 
             # Step 3: Set cookies for access token
-            access_token = response.session.access_token  # Access token returned by Supabase
-            refresh_token = response.session.refresh_token  # Refresh token returned by Supabase
+            access_token = response.session.access_token
+            refresh_token = response.session.refresh_token 
 
-            # Set cookies in the response (ensure cookies are secure)
             response = JsonResponse({
-                "user": serialized_user.data,  # Return serialized data instead of the model object
+                "user": serialized_user.data, 
                 "message": "Logged in successfully"
             })
-
 
             response.set_cookie(
                 "access_token", access_token,
                 httponly=True,
-                secure=False,  # Change to True in production if using HTTPS
-                samesite="Lax",  # Can also try "Strict" if Lax doesn't work
-                max_age=3600,  # Expires in 1 hour
+                secure=True,  # ✅ Keep False for local development, change to True in production
+                samesite="None",  # ✅ Allows cross-site cookies
+                max_age=3600,  # 1 hour
                 path="/"
             )
 
             response.set_cookie(
                 "refresh_token", refresh_token,
                 httponly=True,
-                secure=False,  # Change to True in production if using HTTPS
-                samesite="Lax",  # Can also try "Strict" if Lax doesn't work
-                max_age=604800,  # Expires in 7 days
+                secure=True,
+                samesite="None",
+                max_age=604800,  # 7 days
                 path="/"
             )
-
 
             return response
         except Exception as e:
