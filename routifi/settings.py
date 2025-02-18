@@ -13,15 +13,34 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 # Security settings
 SECRET_KEY = 'django-insecure-gz4+sy8tddk80ezn3+al+hqbd0*_8ny)c%de0-f=7wfg@!3&0$'
 DEBUG = True
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
 # Redis URL (load from .env or fallback to default)
 REDIS_URL = env.str("REDIS_URL", default="redis://localhost:6379/0")
 
 # Function to lazily initialize Redis client
 def get_redis_client():
     return redis.StrictRedis.from_url(REDIS_URL)
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = False
+
+
+SESSION_COOKIE_DOMAIN = "localhost"
+CSRF_COOKIE_DOMAIN = "localhost"
+SESSION_COOKIE_SECURE = False  # Change to True in production (HTTPS)
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
 
 # Celery settings for asynchronous tasks
 CELERY_BROKER_URL = REDIS_URL
@@ -49,11 +68,12 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',  # This might interfere if CSRF tokens are missing
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'app.middleware.TokenVerificationMiddleware',  # Ensure this is in the right place
 ]
 
 # URL settings

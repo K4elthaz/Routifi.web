@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/utility/api";
-import { UserData, LoginResponse, VerifyTokenResponse } from "@/types/auth";
+import { UserData, LoginResponse } from "@/types/auth";
 
 // Register User
 export const registerUser = async (userData: UserData): Promise<any> => {
@@ -13,17 +13,13 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 };
 
 // Login User
-export const loginUser = async (
-  credentials: UserData
-): Promise<LoginResponse> => {
+// authUserAPI.ts
+export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
   try {
     const response = await api.post("/app/login/", credentials);
-    const { access_token, refresh_token, user } = response.data;
 
-    localStorage.setItem("token", access_token);
-    localStorage.setItem("refresh_token", refresh_token);
-
-    return { user, access_token, refresh_token };
+    // The tokens are already set in cookies, no need to handle them here
+    return response.data.user;
   } catch (error: any) {
     throw error.response?.data || "Login failed";
   }
@@ -31,12 +27,12 @@ export const loginUser = async (
 
 // Logout User
 export const logoutUser = (): void => {
-  localStorage.removeItem("token");
+  localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
 };
 
-// Verify Token Function
-export const verifyToken = async (): Promise<VerifyTokenResponse> => {
+// Verify Token Function (To verify user and token)
+export const verifyToken = async (): Promise<any> => {
   try {
     const response = await api.get("/verify-token/");
     return response.data;
