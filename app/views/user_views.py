@@ -137,8 +137,6 @@ def verify_supabase_token(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=401)
 
-
-
 class UserLoginView(APIView):
     def post(self, request):
         """
@@ -171,13 +169,66 @@ class UserLoginView(APIView):
             except UserProfile.DoesNotExist:
                 return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
-            # Step 3: Return user data and authentication token
-            serializer = UserProfileSerializer(user_profile)
-            return Response({
-                "user": serializer.data,
-                "access_token": response.session.access_token,
-                "refresh_token": response.session.refresh_token
-            }, status=status.HTTP_200_OK)
+            # Serialize user profile
+            serialized_user = UserProfileSerializer(user_profile)
 
+            # Step 3: Set cookies for access token
+            access_token = response.session.access_token
+            refresh_token = response.session.refresh_token 
+
+            response = JsonResponse({
+                "user": serialized_user.data, 
+                "message": "Logged in successfully"
+            })
+
+            response.set_cookie(
+                "access_token", access_token,
+                httponly=True,
+                secure=True,  # ✅ Keep False for local development, change to True in production
+                samesite="None",  # ✅ Allows cross-site cookies
+                max_age=3600,  # 1 hour
+                path="/"
+            )
+
+            response.set_cookie(
+                "refresh_token", refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=604800,  # 7 days
+                path="/"
+            )
+
+            return response
         except Exception as e:
             return Response({"error": f"Internal Server Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class TokenRefreshView(APIView):
+    def post(self, request):
+        # Retrieve the refresh token from the cookies
+        refresh_token = request.COOKIES.get("refresh_token")
+        
+        if not refresh_token:
+            return JsonResponse({"error": "No refresh token provided"}, status=401)
+
+        try:
+            # Try to refresh the session using Supabase's API
+            response = supabase.auth.refresh_session(refresh_token)
+
+            if hasattr(response, 'error') and response.error:
+                return JsonResponse({"error": "Failed to refresh token", "details": response.error.message}, status=401)
+
+            # Get the new access token from the refreshed session
+            new_access_token = response.session.access_token
+
+            # Set the new access token in cookies for future requests
+            response = JsonResponse({"access_token": new_access_token}, status=200)
+            response.set_cookie(
+                "access_token", new_access_token, httponly=True, secure=True, max_age=3600  # 1 hour expiry
+            )
+
+            return response
+
+        except Exception as e:
+            # Catch any exception and return a 500 error
+            return JsonResponse({"error": str(e)}, status=500)

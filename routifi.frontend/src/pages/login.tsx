@@ -8,7 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const { setUser, setTokens } = useAuthStore();
+  const { setUser } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,12 +20,13 @@ export default function Login() {
     setError("");
 
     try {
-      const response = await loginUser({ email, password });
-      console.log("Login successful:", response);
+      const user = await loginUser({ email, password });
+      console.log("Login successful:", user);
 
-      setUser(response.user);
-      setTokens(response.access_token, response.refresh_token);
+      // Store user info and tokens
+      setUser(user);
 
+      // Redirect to the homepage or dashboard
       navigate("/");
 
       toast({

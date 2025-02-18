@@ -7,29 +7,27 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // ✅ Ensures cookies are sent with requests
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
+// Interceptor for handling token expiration and refreshing the token
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response) {
-      console.error("API Error:", error.response.data);
-      return Promise.reject(error.response.data);
-    } else if (error.request) {
-      console.error("API No Response:", error.request);
-      return Promise.reject({ message: "Network error. Please try again later." });
-    } else {
-      console.error("API Setup Error:", error.message);
-      return Promise.reject({ message: error.message });
+  async (error) => {
+    if (error.response?.status === 401) {
+      try {
+        // ✅ Make a request to refresh token WITHOUT Authorization header
+        await api.post("/app/user/token/refresh/", {}, { withCredentials: true });
+
+        // ✅ Retry the original request
+        return api(error.config);
+      } catch (refreshError) {
+        console.error("Token refresh failed:", refreshError);
+        window.location.href = "/login";  // Redirect to login page
+        return Promise.reject(refreshError);
+      }
     }
+    return Promise.reject(error);
   }
 );
 
