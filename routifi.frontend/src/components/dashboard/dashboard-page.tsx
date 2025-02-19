@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-
+import { useEffect } from "react";
 import PageContainer from "../page-container";
 import { Breadcrumbs } from "../breadcrumbs";
 import { Heading } from "../ui/heading";
@@ -19,7 +19,11 @@ import DashboardOrg from "./cards/organization-details";
 
 export default function Dashboard() {
   const { slug } = useParams();
-  const { organizations } = useOrganizationStore();
+  const { organizations, fetchOrganizations } = useOrganizationStore();
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, [fetchOrganizations]);
 
   const organization = organizations.find((org) => org.slug === slug);
 
