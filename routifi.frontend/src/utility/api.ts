@@ -7,10 +7,9 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // ✅ Ensures cookies are sent with requests
+  withCredentials: true,
 });
 
-// Interceptor for handling token expiration and refreshing the token
 api.interceptors.response.use(
   (response) => response,
   async (error) => {

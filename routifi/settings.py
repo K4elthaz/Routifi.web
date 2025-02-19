@@ -16,10 +16,10 @@ DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost:5173", "http://127.0.0.1:5173",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost:5173", "http://127.0.0.1:5173",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [r"^http://localhost(:[0-9]+)?$"]
 CORS_ALLOW_CREDENTIALS = True
@@ -39,6 +39,8 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SAMESITE = "None"
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Celery settings for asynchronous tasks
 CELERY_BROKER_URL = REDIS_URL
