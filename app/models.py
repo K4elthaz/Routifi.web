@@ -1,16 +1,34 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.text import slugify
 import uuid
 from django.core.exceptions import ValidationError
 from datetime import datetime
 from django.utils import timezone
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):  
+    supabase_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
+
+    groups = models.ManyToManyField(
+        "auth.Group",
+        related_name="custom_user_set",  # Custom related_name to avoid clashes
+        blank=True,
+    )
+    user_permissions = models.ManyToManyField(
+        "auth.Permission",
+        related_name="custom_user_permissions_set",  # Custom related_name to avoid clashes
+        blank=True,
+    )
 
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
     supabase_uid = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, unique=True)
     full_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    location = models.JSONField(default=list)  # Store [latitude, longitude]
+    location = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)

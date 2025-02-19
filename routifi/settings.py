@@ -47,6 +47,8 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_IMPORTS = ('app.tasks',)
 
+AUTH_USER_MODEL = "app.User"
+
 # Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
