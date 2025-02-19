@@ -107,31 +107,23 @@ def verify_supabase_token(request):
     """
     Verify the Supabase authentication token.
     """
-    token = request.headers.get("Authorization", "")
-    if not token.startswith("Bearer "):
-        return JsonResponse({"error": "Invalid or missing token"}, status=401)
+    token = request.COOKIES.get("access_token")  # ✅ Retrieve from cookies
+    if not token:
+        return JsonResponse({"error": "Token is missing"}, status=401)
 
-    token = token.split("Bearer ")[-1]
     try:
         response = supabase.auth.get_user(token)
 
-        # Debugging: Print the full response
-        print(response)
-
-        # Check if there's an error in the response
         if hasattr(response, 'error') and response.error:
             return JsonResponse({"error": response.error.message}, status=401)
 
-        # Manually convert the user object to a dictionary
         user_data = {
             "id": response.user.id,
             "email": response.user.email,
             "full_name": response.user.user_metadata.get("full_name", ""),
             "location": response.user.user_metadata.get("location", []),
-            # Add any other relevant fields from the user object
         }
 
-        # Return the user data as a JSON response
         return JsonResponse({"message": "Token is valid", "user": user_data})
 
     except Exception as e:
@@ -221,14 +213,19 @@ class TokenRefreshView(APIView):
             # Get the new access token from the refreshed session
             new_access_token = response.session.access_token
 
-            # Set the new access token in cookies for future requests
-            response = JsonResponse({"access_token": new_access_token}, status=200)
-            response.set_cookie(
-                "access_token", new_access_token, httponly=True, secure=True, max_age=3600  # 1 hour expiry
+            # Set the new access token in cookies
+            response_data = JsonResponse({"message": "Token refreshed successfully"}, status=200)
+            response_data.set_cookie(
+                key="access_token",
+                value=new_access_token,
+                httponly=True,
+                secure=True,
+                samesite="Lax",
+                max_age=3600  # 1 hour expiry
             )
 
-            return response
+            return response_data
 
         except Exception as e:
-            # Catch any exception and return a 500 error
             return JsonResponse({"error": str(e)}, status=500)
+

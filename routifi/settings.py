@@ -74,6 +74,12 @@ MIDDLEWARE = [
     'app.middleware.TokenVerificationMiddleware',
 ]
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "app.authentication.SupabaseAuthentication",
+    ),
+}
+
 # URL settings
 ROOT_URLCONF = 'routifi.urls'
 
