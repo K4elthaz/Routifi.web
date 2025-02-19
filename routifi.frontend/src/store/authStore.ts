@@ -3,34 +3,23 @@ import { create } from "zustand";
 
 interface AuthState {
   user: any;
-  accessToken: string | null;
-  refreshToken: string | null;
+  isAuthenticated: boolean;
   setUser: (user: any) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
   clearAuth: () => void;
 }
 
 const useAuthStore = create<AuthState>((set) => ({
   user: JSON.parse(localStorage.getItem("user") || "null"),
-  accessToken: localStorage.getItem("accessToken"),
-  refreshToken: localStorage.getItem("refreshToken"),
+  isAuthenticated: !!localStorage.getItem("user"),
 
   setUser: (user) => {
     localStorage.setItem("user", JSON.stringify(user));
-    set({ user });
-  },
-
-  setTokens: (accessToken, refreshToken) => {
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
-    set({ accessToken, refreshToken });
+    set({ user, isAuthenticated: true });
   },
 
   clearAuth: () => {
     localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    set({ user: null, accessToken: null, refreshToken: null });
+    set({ user: null, isAuthenticated: false });
   },
 }));
 
