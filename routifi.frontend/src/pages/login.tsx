@@ -20,13 +20,18 @@ export default function Login() {
     setError("");
 
     try {
-      const user = await loginUser({ email, password });
-      console.log("Login successful:", user);
+      const { user, session } = await loginUser({ email, password });
 
-      // Store user info and tokens
-      setUser(user);
+      // console.log("Access token:", session?.access_token);
+      // console.log("Refresh token:", session?.refresh_token);
 
-      // Redirect to the homepage or dashboard
+      setUser(user, session?.access_token, session?.refresh_token);
+
+      if (session?.access_token && session?.refresh_token) {
+        localStorage.setItem("access_token", session.access_token);
+        localStorage.setItem("refresh_token", session.refresh_token);
+      }
+
       navigate("/");
 
       toast({
@@ -34,11 +39,12 @@ export default function Login() {
         description: "Welcome to Routifi app!",
       });
     } catch (err) {
+      console.error("Login error:", err);
       setError(err as string);
       toast({
         title: "Login Failed",
         description:
-          "There was an error during login. Please check your credentials and try again.",
+          "Invalid credentials. Please check your email and password.",
       });
     }
   };

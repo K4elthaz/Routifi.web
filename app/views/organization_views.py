@@ -9,6 +9,7 @@ from ..models import Organization, Membership, UserProfile
 from ..serializers.organization_serializers import OrganizationSerializer, MembershipSerializer
 from ..views.user_views import verify_supabase_token
 from django.http import JsonResponse
+from rest_framework.permissions import IsAuthenticated as isAuthenticated
 
 class OrganizationView(APIView):
     def get(self, request):
@@ -82,7 +83,7 @@ class InviteUserToOrganization(APIView):
         if not created and invite.accepted:
             return Response({"error": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
 
-        invite_link = f"http://localhost:5173/app/invite/accept/{invite.id}"
+        invite_link = f"http://127.0.0.1:5173/app/invite/accept/{invite.id}"
         send_mail(
             "Organization Invitation",
             f"You've been invited to join {org.name}. Accept your invite here: {invite_link}",
@@ -94,8 +95,14 @@ class InviteUserToOrganization(APIView):
 
 class AcceptInviteView(APIView):
     """Accept an invitation to join an organization."""
+    permission_classes = [isAuthenticated]
+
     def post(self, request, invite_id):
         invite = get_object_or_404(Membership, id=invite_id, accepted=False)
+
+        if invite.user != request.user:
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+
         invite.accepted = True
         invite.save()
         return Response({"message": "Invite accepted"}, status=status.HTTP_200_OK)

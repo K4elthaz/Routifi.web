@@ -14,18 +14,29 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 
 // Login User
 // authUserAPI.ts
-export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
+export const loginUser = async (credentials: {
+  email: string;
+  password: string;
+}): Promise<LoginResponse> => {
   try {
     const response = await api.post("/app/login/", credentials, {
-      withCredentials: true, // ✅ Ensures cookies are stored in the browser
+      withCredentials: true,
     });
 
-    return response.data.user;
+    // console.log("Full login response:", response.data);
+
+    const { user, session } = response.data;
+
+    if (!session || !session.access_token || !session.refresh_token) {
+      console.error("Tokens missing in response:", response.data);
+      throw new Error("Missing tokens in login response");
+    }
+
+    return { user, session };
   } catch (error: any) {
     throw error.response?.data || "Login failed";
   }
 };
-
 
 // Logout User
 export const logoutUser = (): void => {
