@@ -4,7 +4,7 @@ import HeroBanner from "@/components/hero-banner";
 import { useState } from "react";
 import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -14,20 +14,24 @@ export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const location = useLocation();
+
+  const searchParams = new URLSearchParams(location.search);
+  const returnUrl = searchParams.get("returnUrl") || "/";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      const user = await loginUser({ email, password });
-      console.log("Login successful:", user);
+      const { user, token } = await loginUser({ email, password });
+      console.log("Login successful:", user, "Token:", token);
 
       // Store user info and tokens
-      setUser(user);
+      setUser(user, token);
 
       // Redirect to the homepage or dashboard
-      navigate("/");
+      navigate(returnUrl);
 
       toast({
         title: "Login Successful",

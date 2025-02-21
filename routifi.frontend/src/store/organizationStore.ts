@@ -5,6 +5,7 @@ import {
   createOrganization,
   getOrganizations,
   inviteUserToOrganization,
+  acceptInvite,
 } from "../api/organizationAPI";
 
 interface OrganizationStore {
@@ -15,6 +16,7 @@ interface OrganizationStore {
   addOrganization: (orgData: OrgData) => Promise<void>;
   fetchOrganizations: () => Promise<void>;
   inviteUser: (orgId: string, email: string) => Promise<void>;
+  acceptInvitation: (inviteId: string) => Promise<GetOrganziationData>;
 }
 
 export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
@@ -52,6 +54,19 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     try {
       await inviteUserToOrganization(organizationId, email);
       set({ loading: false });
+    } catch (error) {
+      set({ error: (error as any).message, loading: false });
+      throw error;
+    }
+  },
+
+  acceptInvitation: async (inviteId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await acceptInvite(inviteId);
+      await get().fetchOrganizations();
+      set({ loading: false });
+      return response.organization;
     } catch (error) {
       set({ error: (error as any).message, loading: false });
       throw error;

@@ -63,9 +63,13 @@ export const inviteUserToOrganization = async (
 // ✅ Accept Organization Invitation
 export const acceptInvite = async (
   inviteId: string
-): Promise<{ message: string }> => {
+): Promise<{ message: string; organization: GetOrganziationData }> => {
   try {
-    const response = await api.post(`/invite/accept/${inviteId}/`);
+    const response = await api.post(
+      `/app/invite/accept/${inviteId}/`,
+      {},
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Failed to accept invitation";

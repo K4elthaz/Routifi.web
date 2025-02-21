@@ -14,7 +14,9 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 
 // Login User
 // authUserAPI.ts
-export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
+export const loginUser = async (
+  credentials: UserData
+): Promise<LoginResponse> => {
   try {
     const response = await api.post("/app/login/", credentials, {
       withCredentials: true, // ✅ Ensures cookies are stored in the browser
@@ -25,7 +27,6 @@ export const loginUser = async (credentials: UserData): Promise<LoginResponse> =
     throw error.response?.data || "Login failed";
   }
 };
-
 
 // Logout User
 export const logoutUser = (): void => {

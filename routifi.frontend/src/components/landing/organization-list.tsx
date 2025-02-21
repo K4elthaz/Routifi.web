@@ -30,10 +30,13 @@ export default function OrganizationList() {
     );
   }
 
-  const filteredOrganizations = organizations.filter(
-    (org) =>
-      org.created_by === user.supabase_uid || org.members.includes(user.uid)
-  );
+  const filteredOrganizations = organizations
+    ? organizations.filter(
+        (org) =>
+          org.created_by === user.supabase_uid ||
+          (Array.isArray(org.members) && org.members.includes(user.uid))
+      )
+    : [];
 
   return (
     <Card className="w-full h-full">
