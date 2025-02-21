@@ -9,7 +9,6 @@ from ..models import Organization, Membership, UserProfile
 from ..serializers.organization_serializers import OrganizationSerializer, MembershipSerializer
 from ..views.user_views import verify_supabase_token
 from django.http import JsonResponse
-from rest_framework.permissions import IsAuthenticated as isAuthenticated
 
 class OrganizationView(APIView):
     def get(self, request):
@@ -95,17 +94,15 @@ class InviteUserToOrganization(APIView):
 
 class AcceptInviteView(APIView):
     """Accept an invitation to join an organization."""
-    permission_classes = [isAuthenticated]
 
     def post(self, request, invite_id):
         invite = get_object_or_404(Membership, id=invite_id, accepted=False)
-
-        if invite.user != request.user:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
-
         invite.accepted = True
         invite.save()
-        return Response({"message": "Invite accepted"}, status=status.HTTP_200_OK)
+
+        organization = invite.organization
+
+        return Response({"message": "Invite accepted", "slug": organization.slug}, status=status.HTTP_200_OK)
 
 class OrganizationBySlugView(APIView):
     def get(self, request, slug):

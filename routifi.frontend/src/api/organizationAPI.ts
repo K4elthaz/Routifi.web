@@ -65,7 +65,7 @@ export const acceptInvite = async (
   inviteId: string
 ): Promise<{ message: string }> => {
   try {
-    const response = await api.post(`/invite/accept/${inviteId}/`);
+    const response = await api.post(`/app/invite/accept/${inviteId}/`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Failed to accept invitation";
