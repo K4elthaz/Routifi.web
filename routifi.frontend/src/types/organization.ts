@@ -4,7 +4,7 @@ export interface OrgData {
   //   logo?: File | null;
 }
 
-export interface GetOrganziationData {
+export interface GetOrganizationData {
   id: string;
   name: string;
   slug: string;

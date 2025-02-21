@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { create } from "zustand";
-import { GetOrganziationData, OrgData } from "../types/organization";
+import { GetOrganizationData, OrgData } from "../types/organization";
 import {
   createOrganization,
   getOrganizations,
@@ -11,7 +11,7 @@ interface OrganizationStore {
   loading: boolean;
   error: null | string;
   createdOrganizations: OrgData[];
-  organizations: GetOrganziationData[];
+  organizations: GetOrganizationData[];
   addOrganization: (orgData: OrgData) => Promise<void>;
   fetchOrganizations: () => Promise<void>;
   inviteUser: (orgId: string, email: string) => Promise<void>;
@@ -40,7 +40,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   fetchOrganizations: async () => {
     set({ loading: true, error: null });
     try {
-      const data: GetOrganziationData[] = await getOrganizations();
+      const data: GetOrganizationData[] = await getOrganizations();
       set({ organizations: data, loading: false });
     } catch (error) {
       set({ error: (error as any).message, loading: false });

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/utility/api";
-import { OrgData, GetOrganziationData } from "@/types/organization";
+import { OrgData, GetOrganizationData } from "@/types/organization";
 
 // ✅ Create Organization (Authenticated)
 export const createOrganization = async (
@@ -24,7 +24,7 @@ export const createOrganization = async (
 };
 
 // ✅ Get Organizations for the Authenticated User
-export const getOrganizations = async (): Promise<GetOrganziationData[]> => {
+export const getOrganizations = async (): Promise<GetOrganizationData[]> => {
   try {
     const response = await api.get(`/app/organization/`);
     return response.data;
@@ -36,7 +36,7 @@ export const getOrganizations = async (): Promise<GetOrganziationData[]> => {
 // ✅ Get Organization by Slug (Requires Authentication)
 export const getOrganizationBySlug = async (
   slug: string
-): Promise<GetOrganziationData> => {
+): Promise<GetOrganizationData> => {
   try {
     const response = await api.get(`/app/organization/${slug}/`);
     return response.data;

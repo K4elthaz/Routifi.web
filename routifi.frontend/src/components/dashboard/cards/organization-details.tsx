@@ -8,10 +8,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import { GetOrganziationData } from "@/types/organization";
+import { GetOrganizationData } from "@/types/organization";
 
 interface DashboardOrgProps {
-  organization: GetOrganziationData;
+  organization: GetOrganizationData;
 }
 
 export default function DashboardOrg({ organization }: DashboardOrgProps) {
