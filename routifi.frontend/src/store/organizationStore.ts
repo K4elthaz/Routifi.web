@@ -13,7 +13,7 @@ interface OrganizationStore {
   createdOrganizations: OrgData[];
   organizations: GetOrganizationData[];
   addOrganization: (orgData: OrgData) => Promise<void>;
-  fetchOrganizations: () => Promise<void>;
+  fetchOrganizations: () => Promise<GetOrganizationData[]>;
   inviteUser: (orgId: string, email: string) => Promise<void>;
 }
 
@@ -42,8 +42,11 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     try {
       const data: GetOrganizationData[] = await getOrganizations();
       set({ organizations: data, loading: false });
+      console.log("API Response:", data);
+      return data;
     } catch (error) {
       set({ error: (error as any).message, loading: false });
+      return [];
     }
   },
 

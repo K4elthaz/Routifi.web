@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useEffect } from "react";
 import { useOrganizationStore } from "@/store/organizationStore";
 import useLoadingStore from "@/store/loadingStore";
-
 import useAuthStore from "@/store/authStore";
 
 export default function OrganizationList() {
@@ -15,9 +14,12 @@ export default function OrganizationList() {
     if (user && organizations.length === 0) {
       setLoading(true);
       fetchOrganizations()
-        .catch((error) =>
-          console.error("Failed to fetch organizations:", error)
-        )
+        .then((data) => {
+          console.log("Fetched Organizations:", data); // Log the response
+        })
+        .catch((error) => {
+          console.error("Failed to fetch organizations:", error);
+        })
         .finally(() => setLoading(false));
     }
   }, [user, organizations.length, fetchOrganizations, setLoading]);
@@ -30,24 +32,19 @@ export default function OrganizationList() {
     );
   }
 
-  const filteredOrganizations = organizations.filter(
-    (org) =>
-      org.created_by === user.supabase_uid || org.members.includes(user.uid)
-  );
-
   return (
     <Card className="w-full h-full">
       <CardHeader>
         <CardTitle className="text-base text-muted-foreground">
-          Your Organizations
+          All Organizations
         </CardTitle>
       </CardHeader>
       <CardContent className="items-center">
         <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 items-center text-g">
-          {filteredOrganizations.length === 0 ? (
+          {organizations.length === 0 ? (
             <p>No organizations found.</p>
           ) : (
-            filteredOrganizations.map((org) => (
+            organizations.map((org) => (
               <Link
                 key={org.id}
                 to={`/org/${org.slug}`}
