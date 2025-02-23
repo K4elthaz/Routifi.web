@@ -141,7 +141,7 @@ EMAIL_PORT = 465  # Use 587 if TLS, 465 if SSL
 EMAIL_USE_TLS = False  # Use True if using port 587
 EMAIL_USE_SSL = True   # Use True if using port 465
 EMAIL_HOST_USER = "kael@fluxfusiondevsph.io"  # Your Hostinger email
-EMAIL_HOST_PASSWORD = "0pJ^FWHLC9B1%KA%"  # Your Hostinger email password
+EMAIL_HOST_PASSWORD = "Special25."  # Your Hostinger email password
 DEFAULT_FROM_EMAIL = "kael@fluxfusiondevsph.io"
 
 # Language and timezone settings
