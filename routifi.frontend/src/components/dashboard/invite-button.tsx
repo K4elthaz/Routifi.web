@@ -40,19 +40,40 @@ export function InviteButton({ organizationId }: InviteButtonProps) {
 
     setLoading(true);
     try {
-      await inviteUser(organizationId, email);
-      toast({
-        title: "Invitation sent",
-        description: `Invitation email has been sent to ${email}`,
-      });
+      const response = await inviteUser(organizationId, email);
+
+      if (response?.already_invited) {
+        toast({
+          title: "Already Invited",
+          description: `${email} has already been invited.`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Invitation Sent",
+          description: `An invitation has been sent to ${email}.`,
+        });
+      }
+
       setEmail("");
       setIsDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send invitation",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to send invitation";
+
+      if (error?.already_invited) {
+        toast({
+          title: "Already Invited",
+          description: `${email} has already been invited.`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+
       console.error("Failed to send invitation:", error);
     } finally {
       setLoading(false);

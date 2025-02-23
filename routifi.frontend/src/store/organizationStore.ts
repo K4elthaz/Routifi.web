@@ -14,7 +14,14 @@ interface OrganizationStore {
   organizations: GetOrganizationData[];
   addOrganization: (orgData: OrgData) => Promise<void>;
   fetchOrganizations: () => Promise<GetOrganizationData[]>;
-  inviteUser: (orgId: string, email: string) => Promise<void>;
+  inviteUser: (
+    orgId: string,
+    email: string
+  ) => Promise<{
+    message: string;
+    is_user: boolean;
+    already_invited?: boolean;
+  }>;
 }
 
 export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
@@ -41,7 +48,7 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      console.log("Fetching organizations...");
+      // console.log("Fetching organizations...");
       const data: GetOrganizationData[] = await getOrganizations();
 
       if (!data || data.length === 0) {
@@ -60,8 +67,9 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
   inviteUser: async (organizationId: string, email: string) => {
     set({ loading: true, error: null });
     try {
-      await inviteUserToOrganization(organizationId, email);
+      const response = await inviteUserToOrganization(organizationId, email);
       set({ loading: false });
+      return response; // Ensure the response is returned
     } catch (error) {
       set({ error: (error as any).message, loading: false });
       throw error;
