@@ -1,6 +1,5 @@
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from django.contrib.auth.models import User  # Import Django User model
 from django.http import JsonResponse
 from .models import UserProfile
 from app.supabase import create_supabase_client  # Import Supabase client

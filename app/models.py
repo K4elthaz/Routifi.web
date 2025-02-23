@@ -8,20 +8,6 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 
-class User(AbstractUser):  
-    supabase_uid = models.CharField(max_length=255, unique=True, null=True, blank=True)
-
-    groups = models.ManyToManyField(
-        "auth.Group",
-        related_name="custom_user_set",  # Custom related_name to avoid clashes
-        blank=True,
-    )
-    user_permissions = models.ManyToManyField(
-        "auth.Permission",
-        related_name="custom_user_permissions_set",  # Custom related_name to avoid clashes
-        blank=True,
-    )
-
 class UserProfile(models.Model):
     """Stores user data and links to Supabase."""
     supabase_uid = models.CharField(max_length=255, unique=True, primary_key=True)
@@ -33,7 +19,7 @@ class UserProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     tags = models.ManyToManyField("Tag", related_name="users", blank=True)
     availability = models.JSONField(default=list)
-    LeadsOwned = models.ManyToManyField("Lead")
+    LeadsOwned = models.ManyToManyField("Lead", null=True, blank=True)
     def clean(self):
         """Custom validation to ensure user is available on the current day"""
         current_day = datetime.now().weekday()
