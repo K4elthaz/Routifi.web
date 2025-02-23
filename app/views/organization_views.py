@@ -71,17 +71,34 @@ class OrganizationView(APIView):
 
 class InviteUserToOrganization(APIView):
     """Invite a user to an organization via email."""
+    
     def post(self, request, org_id):
         org = get_object_or_404(Organization, id=org_id)
         email = request.data.get("email")
-        user = get_object_or_404(UserProfile, email=email)
 
-        invite, created = Membership.objects.get_or_create(
-            user=user, organization=org, defaults={"role": "member", "invite_status": "pending"}
-        )
+        user = UserProfile.objects.filter(email=email).first()
+        is_user = bool(user)
 
-        if not created and invite.accepted:
-            return Response({"error": "User is already a member"}, status=status.HTTP_400_BAD_REQUEST)
+        if user:
+            invite, created = Membership.objects.get_or_create(
+                user=user,
+                organization=org,
+                defaults={"role": "member", "invite_status": "pending", "is_user": True}
+            )
+        else:
+            invite, created = Membership.objects.get_or_create(
+                email=email,
+                organization=org,
+                defaults={"role": "member", "invite_status": "pending", "is_user": False}
+            )
+
+        if not created:
+            return Response(
+                {
+                    "message": "User has already been invited",
+                    "is_user": is_user,
+                    "already_invited": True,
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         invite_link = f"http://127.0.0.1:5173/app/invite/accept/{invite.id}"
         send_mail(
@@ -91,7 +108,12 @@ class InviteUserToOrganization(APIView):
             [email],
         )
 
-        return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
+        return Response({
+            "message": "Invitation sent", 
+            "is_user": is_user, 
+            "already_invited": False
+        }, status=status.HTTP_200_OK)
+
 
 class AcceptInviteView(APIView):
     """Accept or reject an invitation to join an organization."""

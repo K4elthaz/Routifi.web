@@ -83,19 +83,22 @@ class Membership(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="memberships", null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="members")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="member")
     invited_at = models.DateTimeField(auto_now_add=True)
     accepted = models.BooleanField(default=False)  # True when the user accepts the invite
     invite_status = models.CharField(max_length=20, default="pending")
+    is_user = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "organization"], name="unique_membership")
         ]
 
     def __str__(self):
-        return f"{self.user.email} - {self.organization.name} ({self.role})"
+        return f"{self.email or self.user.email} - {self.organization.name} ({self.role})"
 
 class Tag(models.Model):
     """A tag that can be assigned to users"""

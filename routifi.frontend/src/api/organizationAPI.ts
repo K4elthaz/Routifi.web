@@ -49,14 +49,23 @@ export const getOrganizationBySlug = async (
 export const inviteUserToOrganization = async (
   orgId: string,
   email: string
-): Promise<{ message: string }> => {
+): Promise<{
+  message: string;
+  is_user: boolean;
+  already_invited?: boolean;
+}> => {
   try {
-    const response = await api.post(`/app/${orgId}/invite/`, {
-      email,
-    });
+    const response = await api.post(
+      `/app/${orgId}/invite/`,
+      { email },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error: any) {
-    throw error.response?.data || "Failed to send invitation";
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    throw { message: "Failed to send invitation" };
   }
 };
 
