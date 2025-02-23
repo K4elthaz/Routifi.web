@@ -235,4 +235,26 @@ class TokenRefreshView(APIView):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
+class LogoutView(APIView):
+    def post(self, request):
+        """
+        Logout the user by removing tokens and clearing cookies.
+        """
+        try:
+            refresh_token = request.COOKIES.get("refresh_token")
 
+            if refresh_token:
+                # Sign out from Supabase
+                supabase.auth.sign_out()
+
+            # Create response
+            response = JsonResponse({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
+
+            # Clear cookies
+            response.delete_cookie("access_token")
+            response.delete_cookie("refresh_token")
+
+            return response
+
+        except Exception as e:
+            return Response({"error": f"Logout failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
