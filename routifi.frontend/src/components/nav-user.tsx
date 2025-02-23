@@ -16,6 +16,7 @@ import { logoutUser } from "@/api/userAuthAPI";
 import { useToast } from "@/hooks/use-toast";
 import useAuthStore from "@/store/authStore";
 import OrganizationList from "./organization-list";
+import { useOrganizationStore } from "@/store/organizationStore";
 
 export default function NavUser() {
   const navigate = useNavigate();
@@ -26,6 +27,12 @@ export default function NavUser() {
   const handleLogout = () => {
     logoutUser();
     navigate("/sign-in");
+
+    useOrganizationStore.setState({
+      organizations: [],
+      createdOrganizations: [],
+      error: null,
+    });
 
     toast({
       title: "Logout Successful",
@@ -50,7 +57,7 @@ export default function NavUser() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">Coach</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user?.email}
+              {user?.user?.email}
             </p>
           </div>
         </DropdownMenuLabel>

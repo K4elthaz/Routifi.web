@@ -4,8 +4,9 @@ import HeroBanner from "@/components/hero-banner";
 import { useState } from "react";
 import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganizationStore } from "@/store/organizationStore";
 
 export default function Login() {
   const { setUser } = useAuthStore();
@@ -13,30 +14,24 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
   const { toast } = useToast();
 
-  const searchParams = new URLSearchParams(location.search);
-  const redirectPath = searchParams.get("redirect");
+  // const searchParams = new URLSearchParams(location.search);
+  // const redirectPath = searchParams.get("redirect");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      const { user, session } = await loginUser({ email, password });
+      const response = await loginUser({ email, password });
+      // console.log("Login successful:", response);
+      setUser(response);
+      // navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
+      navigate("/");
 
-      // console.log("Access token:", session?.access_token);
-      // console.log("Refresh token:", session?.refresh_token);
-
-      setUser(user, session?.access_token, session?.refresh_token);
-
-      if (session?.access_token && session?.refresh_token) {
-        localStorage.setItem("access_token", session.access_token);
-        localStorage.setItem("refresh_token", session.refresh_token);
-      }
-
-      navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
+      useOrganizationStore.setState({ organizations: [] });
 
       toast({
         title: "Login Successful",

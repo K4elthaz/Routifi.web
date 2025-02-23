@@ -170,10 +170,6 @@ class UserLoginView(APIView):
 
             response = JsonResponse({
                 "user": serialized_user.data, 
-                "session": {
-                    "access_token": access_token,
-                    "refresh_token": refresh_token,
-                },
                 "message": "Logged in successfully"
             })
 

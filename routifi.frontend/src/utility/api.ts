@@ -16,7 +16,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       try {
         // ✅ Refresh the token
-        const refreshResponse = await api.post("/app/user/token-refresh/", {}, { withCredentials: true });
+        const refreshResponse = await api.post(
+          "/app/user/token-refresh/",
+          {},
+          { withCredentials: true }
+        );
 
         if (refreshResponse.status === 200) {
           console.log("Token refreshed successfully");
@@ -27,7 +31,9 @@ api.interceptors.response.use(
           if (newAccessToken) {
             // ✅ Store new token in localStorage (or update axios headers)
             localStorage.setItem("access_token", newAccessToken);
-            api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+            api.defaults.headers.common[
+              "Authorization"
+            ] = `Bearer ${newAccessToken}`;
           }
 
           // ✅ Retry the original request
@@ -35,13 +41,12 @@ api.interceptors.response.use(
         }
       } catch (refreshError) {
         console.error("Token refresh failed:", refreshError);
-        window.location.href = "/login"; // Redirect to login if refresh fails
+        window.location.href = "/sign-in"; // Redirect to login if refresh fails
         return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
   }
 );
-
 
 export default api;
