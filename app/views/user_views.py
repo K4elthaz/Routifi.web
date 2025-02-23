@@ -201,24 +201,23 @@ class UserLoginView(APIView):
 
 class TokenRefreshView(APIView):
     def post(self, request):
-        # Retrieve the refresh token from the cookies
         refresh_token = request.COOKIES.get("refresh_token")
-        
         if not refresh_token:
             return JsonResponse({"error": "No refresh token provided"}, status=401)
 
         try:
-            # Try to refresh the session using Supabase's API
             response = supabase.auth.refresh_session(refresh_token)
-
             if hasattr(response, 'error') and response.error:
-                return JsonResponse({"error": "Failed to refresh token", "details": response.error.message}, status=401)
+                return JsonResponse({"error": response.error.message}, status=401)
 
-            # Get the new access token from the refreshed session
             new_access_token = response.session.access_token
+            new_refresh_token = response.session.refresh_token  # ✅ Ensure refresh_token is also updated
 
-            # Set the new access token in cookies
-            response_data = JsonResponse({"message": "Token refreshed successfully"}, status=200)
+            response_data = JsonResponse({"message": "Token refreshed successfully"})
+            response_data = JsonResponse({
+                "message": "Token refreshed successfully",
+                "access_token": new_access_token  # ✅ Ensure FE gets the new token
+            }, status=200)
             response_data.set_cookie(
                 key="access_token",
                 value=new_access_token,
@@ -227,9 +226,13 @@ class TokenRefreshView(APIView):
                 samesite="Lax",
                 max_age=3600  # 1 hour expiry
             )
+            return response_data
+
+            response_data.set_cookie("refresh_token", new_refresh_token, httponly=True, secure=True, samesite="None", max_age=604800)
 
             return response_data
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+
 

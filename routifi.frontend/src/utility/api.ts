@@ -16,12 +16,21 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       try {
         // ✅ Refresh the token
-        const refreshResponse = await api.post("/app/user/token/refresh/", {}, { withCredentials: true });
+        const refreshResponse = await api.post("/app/user/token-refresh/", {}, { withCredentials: true });
 
         if (refreshResponse.status === 200) {
           console.log("Token refreshed successfully");
 
-          // ✅ Retry the original request AFTER ensuring cookies are updated
+          // ✅ Extract new access token from response body
+          const newAccessToken = refreshResponse.data.access_token;
+
+          if (newAccessToken) {
+            // ✅ Store new token in localStorage (or update axios headers)
+            localStorage.setItem("access_token", newAccessToken);
+            api.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
+          }
+
+          // ✅ Retry the original request
           return api(error.config);
         }
       } catch (refreshError) {
@@ -33,5 +42,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default api;

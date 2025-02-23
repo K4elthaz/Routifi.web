@@ -10,7 +10,7 @@ urlpatterns = [
     path("user/", UserProfileView.as_view(), name="user-profile-create"),
     path("login/", UserLoginView.as_view(), name="user-login"),
     path("verify-token/", verify_supabase_token, name="verify-token"),
-    path('user/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('user/token-refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     
     # Organization Endpoints
     path("organization/", OrganizationView.as_view(), name="organization-create"),
