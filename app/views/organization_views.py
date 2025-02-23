@@ -93,16 +93,33 @@ class InviteUserToOrganization(APIView):
         return Response({"message": "Invitation sent"}, status=status.HTTP_200_OK)
 
 class AcceptInviteView(APIView):
-    """Accept an invitation to join an organization."""
+    """Accept or reject an invitation to join an organization."""
 
     def post(self, request, invite_id):
         invite = get_object_or_404(Membership, id=invite_id, accepted=False)
-        invite.accepted = True
-        invite.save()
 
-        organization = invite.organization
+        action = request.data.get("action")  # Expecting "accept" or "reject"
 
-        return Response({"message": "Invite accepted", "slug": organization.slug}, status=status.HTTP_200_OK)
+        if action == "accept":
+            invite.accepted = True
+            invite.invite_status = "accepted"
+            invite.save()
+            return Response(
+                {"message": "Invite accepted", "slug": invite.organization.slug},
+                status=status.HTTP_200_OK,
+            )
+
+        elif action == "reject":
+            invite.invite_status = "rejected"
+            invite.save()
+            return Response(
+                {"message": "Invite rejected"}, status=status.HTTP_200_OK
+            )
+
+        return Response(
+            {"error": "Invalid action. Use 'accept' or 'reject'."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 class OrganizationBySlugView(APIView):
     def get(self, request, slug):

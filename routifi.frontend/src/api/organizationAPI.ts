@@ -61,13 +61,16 @@ export const inviteUserToOrganization = async (
 };
 
 // ✅ Accept Organization Invitation
-export const acceptInvite = async (
-  inviteId: string
-): Promise<{ message: string }> => {
+export const handleInviteResponse = async (
+  inviteId: string,
+  action: "accept" | "reject"
+): Promise<{ message: string; slug?: string }> => {
   try {
-    const response = await api.post(`/app/invite/accept/${inviteId}/`);
+    const response = await api.post(`/app/invite/accept/${inviteId}/`, {
+      action,
+    });
     return response.data;
   } catch (error: any) {
-    throw error.response?.data || "Failed to accept invitation";
+    throw error.response?.data || "Failed to process invitation";
   }
 };
