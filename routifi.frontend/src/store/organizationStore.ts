@@ -39,12 +39,19 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
 
   fetchOrganizations: async () => {
     set({ loading: true, error: null });
+
     try {
+      console.log("Fetching organizations...");
       const data: GetOrganizationData[] = await getOrganizations();
+
+      if (!data || data.length === 0) {
+        console.warn("No organizations found or authentication issue.");
+      }
+
       set({ organizations: data, loading: false });
-      console.log("API Response:", data);
       return data;
     } catch (error) {
+      console.error("Failed to fetch organizations:", error);
       set({ error: (error as any).message, loading: false });
       return [];
     }

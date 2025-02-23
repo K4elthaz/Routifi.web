@@ -6,6 +6,7 @@ import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganizationStore } from "@/store/organizationStore";
 
 export default function Login() {
   const { setUser } = useAuthStore();
@@ -25,10 +26,12 @@ export default function Login() {
 
     try {
       const response = await loginUser({ email, password });
-      console.log("Login successful:", response); // Debugging
+      // console.log("Login successful:", response);
       setUser(response);
       // navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
       navigate("/");
+
+      useOrganizationStore.setState({ organizations: [] });
 
       toast({
         title: "Login Successful",
