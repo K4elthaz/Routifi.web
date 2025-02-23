@@ -4,64 +4,71 @@ import api from "@/utility/api";
 interface AuthState {
   user: any;
   isAuthenticated: boolean;
-  accessToken: string | null;
-  refreshToken: string | null;
   checkAuth: () => Promise<void>;
-  setUser: (user: any, accessToken: string, refreshToken: string) => void;
+  refreshAccessToken: () => Promise<boolean>;
+  setUser: (user: any) => void;
   clearAuth: () => void;
 }
 
 const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
-  accessToken: null,
-  refreshToken: null,
 
+  // ✅ Check if user is authenticated
   checkAuth: async () => {
     try {
       const response = await api.get("/app/profile/", {
-        withCredentials: true, // ✅ Send cookies with request
+        withCredentials: true, // ✅ Send cookies
       });
 
       set({
         user: response.data.user,
         isAuthenticated: true,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth check failed:", error);
-      set({
-        user: null,
-        isAuthenticated: false,
-        accessToken: null,
-        refreshToken: null,
-      });
+
+      // 🔄 Try refreshing the access token
+      const refreshed = await useAuthStore.getState().refreshAccessToken();
+      if (!refreshed) {
+        set({ user: null, isAuthenticated: false });
+      }
     }
   },
 
-  setUser: (user, accessToken, refreshToken) => {
-    set({
-      user,
-      isAuthenticated: true,
-      accessToken,
-      refreshToken,
-    });
+  // 🔄 Refresh access token if expired
+  refreshAccessToken: async () => {
+    try {
+      const response = await api.post(
+        "/auth/refresh/",
+        {},
+        { withCredentials: true }
+      );
 
-    // ✅ Store tokens in localStorage
-    localStorage.setItem("access_token", accessToken);
-    localStorage.setItem("refresh_token", refreshToken);
+      if (response.status === 200) {
+        console.log("Access token refreshed");
+        return true;
+      }
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+    }
+    return false;
   },
 
-  clearAuth: () => {
-    set({
-      user: null,
-      isAuthenticated: false,
-      accessToken: null,
-      refreshToken: null,
-    });
+  // ✅ Set user without storing tokens in localStorage
+  setUser: (user) => {
+    set({ user, isAuthenticated: true });
+  },
 
-    // ✅ Remove tokens from localStorage
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+  // ❌ Secure logout (removes cookies on backend)
+  clearAuth: async () => {
+    try {
+      await api.post("/auth/logout/", {}, { withCredentials: true });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+
+    set({ user: null, isAuthenticated: false });
   },
 }));
 

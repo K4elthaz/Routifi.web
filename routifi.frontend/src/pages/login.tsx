@@ -24,17 +24,12 @@ export default function Login() {
     setError("");
 
     try {
-      const { user, session } = await loginUser({ email, password });
+      const { user } = await loginUser({ email, password });
 
       // console.log("Access token:", session?.access_token);
       // console.log("Refresh token:", session?.refresh_token);
 
-      setUser(user, session?.access_token, session?.refresh_token);
-
-      if (session?.access_token && session?.refresh_token) {
-        localStorage.setItem("access_token", session.access_token);
-        localStorage.setItem("refresh_token", session.refresh_token);
-      }
+      setUser(user);
 
       navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
 
