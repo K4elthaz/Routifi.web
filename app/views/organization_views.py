@@ -13,6 +13,13 @@ from django.http import JsonResponse
 class OrganizationView(APIView):
     def get(self, request):
         """Retrieve organizations where the authenticated user is either the creator or an accepted member."""
+
+        # 🔹 Extract token from cookies instead of headers
+        access_token = request.COOKIES.get("access_token")
+        if not access_token:
+            return Response({"error": "Authentication token missing"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+
         response = verify_supabase_token(request)
         if response.status_code != 200:
             return response
