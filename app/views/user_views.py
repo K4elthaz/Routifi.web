@@ -178,7 +178,7 @@ class UserLoginView(APIView):
                 httponly=True,
                 secure=True,  # ✅ Keep False for local development, change to True in production
                 samesite="None",  # ✅ Allows cross-site cookies
-                max_age=3600,  # 1 hour
+                max_age=604800,  # 1 hour
                 path="/"
             )
 
