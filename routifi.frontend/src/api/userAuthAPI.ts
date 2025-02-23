@@ -22,7 +22,13 @@ export const loginUser = async (
       withCredentials: true,
     });
 
-    return response.data.user;
+    // console.log("Login API Response:", response.data);
+
+    if (!response.data || !response.data.user) {
+      throw new Error("Invalid API response: Missing user data");
+    }
+
+    return response.data;
   } catch (error: any) {
     throw error.response?.data || "Login failed";
   }

@@ -4,7 +4,7 @@ import HeroBanner from "@/components/hero-banner";
 import { useState } from "react";
 import { loginUser } from "@/api/userAuthAPI";
 import useAuthStore from "@/store/authStore";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
@@ -13,25 +13,22 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
   const { toast } = useToast();
 
-  const searchParams = new URLSearchParams(location.search);
-  const redirectPath = searchParams.get("redirect");
+  // const searchParams = new URLSearchParams(location.search);
+  // const redirectPath = searchParams.get("redirect");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     try {
-      const { user } = await loginUser({ email, password });
-
-      // console.log("Access token:", session?.access_token);
-      // console.log("Refresh token:", session?.refresh_token);
-
-      setUser(user);
-
-      navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
+      const response = await loginUser({ email, password });
+      console.log("Login successful:", response); // Debugging
+      setUser(response);
+      // navigate(redirectPath ? decodeURIComponent(redirectPath) : "/");
+      navigate("/");
 
       toast({
         title: "Login Successful",
