@@ -8,7 +8,6 @@ import MobileLeads from "./pages/mobile-leads";
 import Index from "./pages/landing-page";
 import Login from "./pages/login";
 import Signup from "./pages/register";
-import AcceptInvite from "./pages/accept-invite-page";
 
 import OrgnaizationParent from "./pages/org-layout-page";
 import Dashboard from "./components/dashboard/dashboard-page";
@@ -28,7 +27,6 @@ function AppContent() {
         <Route path="/mobile-leads" element={<MobileLeads />} />
         <Route path="/sign-in" element={<Login />} />
         <Route path="/sign-up" element={<Signup />} />
-        <Route path="/app/invite/accept/:inviteId" element={<AcceptInvite />} />
         <Route path="/org/:slug" element={<OrgnaizationParent />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
