@@ -6,6 +6,7 @@ from ..serializers.user_serializers import UserProfileSerializer
 from ..supabase import create_supabase_client
 from django.http import JsonResponse
 
+import jwt  # PyJWT package
 supabase = create_supabase_client()
 
 class UserProfileView(APIView):
@@ -103,17 +104,30 @@ class UserProfileView(APIView):
         except UserProfile.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
+
 def verify_supabase_token(request):
     """
-    Verify the Supabase authentication token.
+    Verify the Supabase authentication token and return expiry time.
     """
-    token = request.COOKIES.get("access_token")  # ✅ Retrieve from cookies
+    token = request.COOKIES.get("access_token")
     if not token:
         return JsonResponse({"error": "Token is missing"}, status=401)
 
     try:
-        response = supabase.auth.get_user(token)
+        # ✅ Step 1: Decode JWT to get expiration time
+        decoded_token = jwt.decode(token, options={"verify_signature": False})  # No need to verify signature
+        exp_timestamp = decoded_token.get("exp")  # Expiry timestamp
 
+        if not exp_timestamp:
+            return JsonResponse({"error": "Invalid token structure"}, status=401)
+
+        # ✅ Step 2: Calculate time remaining
+        import time
+        current_time = int(time.time())  # Current UNIX timestamp
+        expires_in = max(exp_timestamp - current_time, 0)  # Ensure it's not negative
+
+        # ✅ Step 3: Validate token with Supabase
+        response = supabase.auth.get_user(token)
         if hasattr(response, 'error') and response.error:
             return JsonResponse({"error": response.error.message}, status=401)
 
@@ -124,10 +138,15 @@ def verify_supabase_token(request):
             "location": response.user.user_metadata.get("location", []),
         }
 
-        return JsonResponse({"message": "Token is valid", "user": user_data})
+        return JsonResponse({
+            "message": "Token is valid",
+            "user": user_data,
+            "expires_in": expires_in  # ✅ Send expiry time to frontend
+        })
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=401)
+
 
 class UserLoginView(APIView):
     def post(self, request):
@@ -169,7 +188,9 @@ class UserLoginView(APIView):
             refresh_token = response.session.refresh_token 
 
             response = JsonResponse({
-                "user": serialized_user.data, 
+                "user": serialized_user.data,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
                 "message": "Logged in successfully"
             })
 
@@ -178,7 +199,7 @@ class UserLoginView(APIView):
                 httponly=True,
                 secure=True,  # ✅ Keep False for local development, change to True in production
                 samesite="None",  # ✅ Allows cross-site cookies
-                max_age=604800,  # 1 hour
+                max_age=130,  # 1 hour
                 path="/"
             )
 
@@ -209,11 +230,12 @@ class TokenRefreshView(APIView):
             new_access_token = response.session.access_token
             new_refresh_token = response.session.refresh_token  # ✅ Ensure refresh_token is also updated
 
-            response_data = JsonResponse({"message": "Token refreshed successfully"})
             response_data = JsonResponse({
                 "message": "Token refreshed successfully",
-                "access_token": new_access_token  # ✅ Ensure FE gets the new token
+                "access_token": new_access_token  # ✅ FE gets the new token
             }, status=200)
+
+            # ✅ Set both access_token and refresh_token correctly
             response_data.set_cookie(
                 key="access_token",
                 value=new_access_token,
@@ -222,9 +244,14 @@ class TokenRefreshView(APIView):
                 samesite="Lax",
                 max_age=3600  # 1 hour expiry
             )
-            return response_data
-
-            response_data.set_cookie("refresh_token", new_refresh_token, httponly=True, secure=True, samesite="None", max_age=604800)
+            response_data.set_cookie(
+                key="refresh_token",
+                value=new_refresh_token,  # ✅ Ensure refresh_token is updated
+                httponly=True,
+                secure=True,
+                samesite="Lax",  # SameSite="None" if using cross-origin
+                max_age=604800  # 7 days expiry
+            )
 
             return response_data
 

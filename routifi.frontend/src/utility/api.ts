@@ -7,46 +7,38 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
+  withCredentials: true, // ✅ Ensure cookies are sent with requests
 });
 
+// ✅ Function to refresh the access token
+const refreshToken = async () => {
+  try {
+    const response = await axios.post(`${API_URL}/app/token-refresh/`, {}, { withCredentials: true });
+    return response.data.access_token;
+  } catch (error) {
+    console.error("Token refresh failed", error);
+    throw error; // Ensure logout or redirect happens if refresh fails
+  }
+};
+
+// ✅ Axios Interceptor to handle expired tokens
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
       try {
-        // ✅ Refresh the token
-        const refreshResponse = await api.post(
-          "/app/user/token-refresh/",
-          {},
-          { withCredentials: true }
-        );
-
-        if (refreshResponse.status === 200) {
-          console.log("Token refreshed successfully");
-
-          // ✅ Extract new access token from response body
-          const newAccessToken = refreshResponse.data.access_token;
-
-          if (newAccessToken) {
-            // ✅ Store new token in localStorage (or update axios headers)
-            localStorage.setItem("access_token", newAccessToken);
-            api.defaults.headers.common[
-              "Authorization"
-            ] = `Bearer ${newAccessToken}`;
-          }
-
-          // ✅ Retry the original request
-          return api(error.config);
-        }
+        const newAccessToken = await refreshToken();
+        error.config.headers["Authorization"] = `Bearer ${newAccessToken}`;
+        return api.request(error.config); // Retry failed request
       } catch (refreshError) {
-        console.error("Token refresh failed:", refreshError);
-        window.location.href = "/sign-in"; // Redirect to login if refresh fails
+        console.error("Session expired, redirecting to login...");
+        window.location.href = "/sign-in";
         return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
   }
 );
+
 
 export default api;

@@ -16,11 +16,14 @@ export interface LoginResponse {
   };
 }
 
-export interface VerifyTokenResponse {
+export interface CheckAuthResponse {
   message: string;
-  user: {
+  user?: {  // ✅ User is optional in case of errors
     id: string;
     email: string;
     full_name?: string;
+    location?: string[]; // ✅ Add location (matches backend)
   };
+  expires_in?: number; // ✅ Include token expiry time
 }
+
