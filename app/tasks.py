@@ -73,7 +73,7 @@ def assign_leads_to_members(batch_size=5):
                     lead=lead,
                     user=user,
                     expires_at=expires_at,
-                    lead_link = f"{os.environ.get('SERVER_END_POINT')}app/leads/assignment/{lead.id}/?token={token}"
+                    lead_link = f"{os.environ.get('SERVER_END_POINT')}app/leads/assignment/{lead.id}/?token={token}",
                     status="pending",
                 )
 
