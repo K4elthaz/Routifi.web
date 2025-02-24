@@ -20,8 +20,9 @@ urlpatterns = [
     path("<str:slug>/", OrganizationBySlugView.as_view(), name="organization-by-slug"),
 
     # Lead Endpoints
-    path('leads/', LeadCreateView.as_view(), name='create-lead'),
-    path('leads/assignment/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='lead-assignment'),  # Updated endpoint
+    path('org/leads/', LeadCreateView.as_view(), name='create-lead'),
+    path('leads/assignment/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='lead-assignment'), 
+    path('org/<str:slug>/leads/', LeadCreateView.as_view(), name='organization-leads'),
 
     # Tag Endpoints
     path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),

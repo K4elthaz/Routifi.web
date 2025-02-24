@@ -90,6 +90,37 @@ class LeadCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+        
+    def get(self, request, slug, *args, **kwargs):
+        # Step 1: Verify Supabase token
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        # Step 2: Retrieve the organization using the slug
+        organization = get_object_or_404(Organization, slug=slug)
+        
+        # Step 3: Validate if the request user has access to the organization
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to access these leads"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Step 4: Retrieve leads associated with the organization
+        leads = Lead.objects.filter(organization=organization)
+        serializer = LeadSerializer(leads, many=True)
+
+        return JsonResponse({"leads": serializer.data}, status=status.HTTP_200_OK)
+    
 
 class LeadAssignmentView(APIView):
     """ Handles lead acceptance and rejection """
