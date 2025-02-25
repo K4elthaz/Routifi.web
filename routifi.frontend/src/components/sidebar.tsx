@@ -8,6 +8,9 @@ import { ChevronLeft } from "lucide-react";
 import { DashboardNav } from "./nav";
 import { getNavItems } from "@/constants/nav";
 
+import useAuthStore from "@/store/authStore";
+import { useOrganizationStore } from "@/store/organizationStore";
+
 type SidebarProps = {
   className?: string;
   logo?: string;
@@ -16,6 +19,12 @@ type SidebarProps = {
 
 export default function Sidebar({ className, logo, slug }: SidebarProps) {
   const { isMinimized, toggle } = useSidebar();
+  const { user } = useAuthStore();
+  const { organizations } = useOrganizationStore();
+
+  const isOwner = organizations.some(
+    (org) => org.created_by === user?.user.supabase_uid
+  );
 
   const handleToggle = () => {
     toggle();
@@ -47,7 +56,7 @@ export default function Sidebar({ className, logo, slug }: SidebarProps) {
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <div className="mt-3 space-y-1">
-            <DashboardNav items={getNavItems(slug || "")} />
+            <DashboardNav items={getNavItems(slug || "", isOwner)} />
           </div>
         </div>
       </div>

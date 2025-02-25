@@ -35,9 +35,11 @@ export const navItems = [
   },
 ];
 
-export const getNavItems = (slug: string) => {
-  return navItems.map((item) => ({
-    ...item,
-    href: item.href.replace(/{slug}/g, slug),
-  }));
+export const getNavItems = (slug: string, isOwner: boolean) => {
+  return navItems
+    .map((item) => ({
+      ...item,
+      href: item.href.replace("{slug}", slug),
+    }))
+    .filter((item) => isOwner || !item.ownerOnly);
 };
