@@ -16,7 +16,7 @@ urlpatterns = [
     # Organization Endpoints
     path("organization/", OrganizationView.as_view(), name="organization-create"),
     path("<uuid:org_id>/invite/", InviteUserToOrganization.as_view(), name="invite-user"),
-    path("invite/accept/<uuid:invite_id>/", AcceptInviteView.as_view(), name="accept-invite"),
+    path("accept-invite/", AcceptInviteView.as_view(), name="accept-invite"),
     path("<str:slug>/", OrganizationBySlugView.as_view(), name="organization-by-slug"),
 
     # Lead Endpoints

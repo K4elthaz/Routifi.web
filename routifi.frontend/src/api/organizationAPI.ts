@@ -1,6 +1,10 @@
 import api from "@/utility/api";
 import { checkAuth, refreshAccessToken } from "@/api/userAuthAPI";
-import { OrgData, GetOrganizationData } from "@/types/organization";
+import {
+  OrgData,
+  GetOrganizationData,
+  AcceptInviteResponse,
+} from "@/types/organization";
 
 // ✅ Helper function to ensure authentication before making requests
 const ensureAuth = async (): Promise<boolean> => {
@@ -13,7 +17,9 @@ const ensureAuth = async (): Promise<boolean> => {
 };
 
 // ✅ Create Organization (Authenticated)
-export const createOrganization = async (orgData: OrgData): Promise<OrgData> => {
+export const createOrganization = async (
+  orgData: OrgData
+): Promise<OrgData> => {
   if (!(await ensureAuth())) {
     window.location.href = "/sign-in"; // ❌ Redirect if refresh fails
     throw new Error("User not authenticated");
@@ -43,7 +49,9 @@ export const getOrganizations = async (): Promise<GetOrganizationData[]> => {
 };
 
 // ✅ Get Organization by Slug (Requires Authentication)
-export const getOrganizationBySlug = async (slug: string): Promise<GetOrganizationData> => {
+export const getOrganizationBySlug = async (
+  slug: string
+): Promise<GetOrganizationData> => {
   if (!(await ensureAuth())) {
     window.location.href = "/sign-in";
     throw new Error("User not authenticated");
@@ -58,7 +66,10 @@ export const getOrganizationBySlug = async (slug: string): Promise<GetOrganizati
 };
 
 // ✅ Invite User to Organization
-export const inviteUserToOrganization = async (orgId: string, email: string): Promise<{
+export const inviteUserToOrganization = async (
+  orgId: string,
+  email: string
+): Promise<{
   message: string;
   is_user: boolean;
   already_invited?: boolean;
@@ -69,7 +80,11 @@ export const inviteUserToOrganization = async (orgId: string, email: string): Pr
   }
 
   try {
-    const response = await api.post(`/app/${orgId}/invite/`, { email }, { withCredentials: true });
+    const response = await api.post(
+      `/app/${orgId}/invite/`,
+      { email },
+      { withCredentials: true }
+    );
     return response.data;
   } catch (error: any) {
     if (error.response?.data) {
@@ -80,19 +95,29 @@ export const inviteUserToOrganization = async (orgId: string, email: string): Pr
 };
 
 // ✅ Accept Organization Invitation
-export const handleInviteResponse = async (
-  inviteId: string,
-  action: "accept" | "reject"
-): Promise<{ message: string; slug?: string }> => {
+export const acceptInviteToOrganization = async (
+  inviteCode: string
+): Promise<AcceptInviteResponse> => {
   if (!(await ensureAuth())) {
     window.location.href = "/sign-in";
     throw new Error("User not authenticated");
   }
 
   try {
-    const response = await api.post(`/app/invite/accept/${inviteId}/`, { action });
+    const response = await api.post<AcceptInviteResponse>(
+      "/app/accept-invite/",
+      { invite_code: inviteCode },
+      { withCredentials: true }
+    );
+
+    console.log("API Response:", response.data); // ✅ Debugging log
+
+    if (!response.data || !response.data.organization) {
+      throw new Error("Invalid response from server");
+    }
+
     return response.data;
   } catch (error: any) {
-    throw error.response?.data || "Failed to process invitation";
+    throw error.response?.data || new Error("Failed to accept invitation");
   }
 };

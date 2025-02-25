@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import useAuthStore from "@/store/authStore";
 import { CreateOrgForm } from "@/components/landing/create-org";
+import { JoinOrg } from "@/components/landing/join-org";
 import OrganizationList from "@/components/landing/organization-list";
 
 export default function Index() {
@@ -40,7 +41,12 @@ export default function Index() {
               <div className="flex w-full lg:max-w-md justify-center gap-2">
                 <ModeToggle />
                 <div className="flex gap-2 justify-center items-center">
-                  <CreateOrgForm />
+                  <Button asChild size="sm" variant="outline">
+                    <CreateOrgForm />
+                  </Button>
+                  <Button asChild size="sm" variant="default">
+                    <JoinOrg />
+                  </Button>
                 </div>
               </div>
             </div>

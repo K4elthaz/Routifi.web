@@ -22,3 +22,8 @@ export interface GetOrganizationData {
   api_key?: string;
   members?: OrganizationMember[];
 }
+
+export interface AcceptInviteResponse {
+  message: string;
+  organization: string;
+}

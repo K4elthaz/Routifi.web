@@ -5,6 +5,7 @@ import {
   createOrganization,
   getOrganizations,
   inviteUserToOrganization,
+  acceptInviteToOrganization,
 } from "../api/organizationAPI";
 
 interface OrganizationStore {
@@ -22,6 +23,7 @@ interface OrganizationStore {
     is_user: boolean;
     already_invited?: boolean;
   }>;
+  acceptInvite: (inviteCode: string) => Promise<string | undefined>;
 }
 
 export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
@@ -73,6 +75,23 @@ export const useOrganizationStore = create<OrganizationStore>((set, get) => ({
     } catch (error) {
       set({ error: (error as any).message, loading: false });
       throw error;
+    }
+  },
+
+  acceptInvite: async (inviteCode: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await acceptInviteToOrganization(inviteCode);
+
+      if (!response || !response.organization) {
+        throw new Error("Failed to accept invite");
+      }
+
+      await get().fetchOrganizations();
+      set({ loading: false });
+      return response.organization;
+    } catch (error) {
+      set({ error: (error as any).message, loading: false });
     }
   },
 }));

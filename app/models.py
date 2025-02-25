@@ -77,6 +77,7 @@ class Membership(models.Model):
     accepted = models.BooleanField(default=False)  # True when the user accepts the invite
     invite_status = models.CharField(max_length=20, default="pending")
     is_user = models.BooleanField(default=False)
+    invite_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     class Meta:
         constraints = [

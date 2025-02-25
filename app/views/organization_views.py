@@ -1,4 +1,8 @@
 import json
+import random
+import string
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -68,10 +72,14 @@ class OrganizationView(APIView):
             serializer.save(created_by=user_profile)  # The 'created_by' field is set to the UserProfile
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+def generate_invite_code(length=8):
+    """Generate a random alphanumeric invite code."""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 class InviteUserToOrganization(APIView):
-    """Invite a user to an organization via email."""
-    
+    """Invite a user to an organization via a unique invite code."""
+
     def post(self, request, org_id):
         org = get_object_or_404(Organization, id=org_id)
         email = request.data.get("email")
@@ -79,70 +87,102 @@ class InviteUserToOrganization(APIView):
         user = UserProfile.objects.filter(email=email).first()
         is_user = bool(user)
 
-        if user:
-            invite, created = Membership.objects.get_or_create(
-                user=user,
-                organization=org,
-                defaults={"role": "member", "invite_status": "pending", "is_user": True}
+        invite_code = generate_invite_code()
+
+        # Ensure the invite exists and update or create the invite code
+        invite, created = Membership.objects.update_or_create(
+            email=email if not user else None,
+            user=user if user else None,
+            organization=org,
+            defaults={
+                "role": "member",
+                "invite_status": "pending",
+                "is_user": is_user,
+                "invite_code": invite_code,
+            }
+        )
+
+        if not created and not invite.invite_code:
+            invite.invite_code = invite_code
+            invite.save()
+
+        # Customize the email message based on whether the user exists
+        if is_user:
+            email_message = (
+                f"You've been invited to join {org.name}.\n\n"
+                f"Please **log in** to accept the invitation using this invite code: **{invite.invite_code}**.\n"
+                f"🔗 [Log in here](http://127.0.0.1:5173/sign-in)"
             )
         else:
-            invite, created = Membership.objects.get_or_create(
-                email=email,
-                organization=org,
-                defaults={"role": "member", "invite_status": "pending", "is_user": False}
+            email_message = (
+                f"You've been invited to join {org.name}.\n\n"
+                f"Since you don't have an account, please **register first** and then use this invite code: **{invite.invite_code}**.\n"
+                f"🔗 [Register here](http://127.0.0.1:5173/sign-up)"
             )
 
-        if not created:
-            return Response(
-                {
-                    "message": "User has already been invited",
-                    "is_user": is_user,
-                    "already_invited": True,
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-        invite_link = f"http://127.0.0.1:5173/app/invite/accept/{invite.id}"
         send_mail(
             "Organization Invitation",
-            f"You've been invited to join {org.name}. Accept your invite here: {invite_link}",
-            "kael@fluxfusiondevsph.io", 
+            email_message,
+            "kael@fluxfusiondevsph.io",
             [email],
         )
 
+
         return Response({
-            "message": "Invitation sent", 
-            "is_user": is_user, 
-            "already_invited": False
+            "message": "Invitation sent",
+            "is_user": is_user,
+            "already_invited": not created,
+            "organization": org.name,
         }, status=status.HTTP_200_OK)
 
-
 class AcceptInviteView(APIView):
-    """Accept or reject an invitation to join an organization."""
+    """Accept an organization invitation using an invite code with Supabase authentication."""
 
-    def post(self, request, invite_id):
-        invite = get_object_or_404(Membership, id=invite_id, accepted=False)
+    def post(self, request):
+        # Verify Supabase token
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response  # Return authentication failure response
 
-        action = request.data.get("action")  # Expecting "accept" or "reject"
+        invite_code = request.data.get("invite_code")
 
-        if action == "accept":
-            invite.accepted = True
-            invite.invite_status = "accepted"
-            invite.save()
-            return Response(
-                {"message": "Invite accepted", "slug": invite.organization.slug},
-                status=status.HTTP_200_OK,
-            )
+        try:
+            invite = Membership.objects.get(invite_code=invite_code)
+        except Membership.DoesNotExist:
+            return Response({"message": "Invalid invite code."}, status=status.HTTP_400_BAD_REQUEST)
 
-        elif action == "reject":
-            invite.invite_status = "rejected"
-            invite.save()
-            return Response(
-                {"message": "Invite rejected"}, status=status.HTTP_200_OK
-            )
+        # Check if the invitation has expired (7 days)
+        if invite.created_at + timedelta(days=7) < timezone.now():
+            return Response({"message": "This invite has expired."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(
-            {"error": "Invalid action. Use 'accept' or 'reject'."},
-            status=status.HTTP_400_BAD_REQUEST,
+        # Get the authenticated user from Supabase token
+        response_data = json.loads(response.content)  # Convert JSONResponse to dict
+        user_data = response_data.get("user")  
+        if not user_data:
+            return Response({"message": "User not found in authentication system."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_email = user_data.get("email")
+        supabase_uid = user_data.get("id")  # Supabase UID
+
+        # Ensure the user accepting the invite matches the invite email
+        if invite.email and invite.email != user_email:
+            return Response({"message": "This invite is not for your account."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Fetch or create the UserProfile using `supabase_uid`
+        user_profile, _ = UserProfile.objects.get_or_create(
+            supabase_uid=supabase_uid,  # Correcting the field name
+            defaults={"email": user_email, "full_name": user_data.get("full_name", "")}
         )
+
+        # Accept the invite
+        invite.accepted = True
+        invite.invite_status = "accepted"
+        invite.user = user_profile  # Assign the correct UserProfile instance
+        invite.save()
+
+        return Response({"message": "Invitation accepted successfully.", "organization": invite.organization.slug}, status=status.HTTP_200_OK)
+
+
 
 class OrganizationBySlugView(APIView):
     def get(self, request, slug):
