@@ -5,10 +5,19 @@ import { DashboardNav } from "./nav";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { getNavItems } from "@/constants/nav";
+import useAuthStore from "@/store/authStore";
+import { useOrganizationStore } from "@/store/organizationStore";
 
 export function MobileSidebar({ slug }: { slug?: string }) {
   const [open, setOpen] = useState(false);
-  const processedNavItems = slug ? getNavItems(slug) : [];
+  const { user } = useAuthStore();
+  const { organizations } = useOrganizationStore();
+
+  const isOwner = organizations.some(
+    (org) => org.created_by === user?.user.supabase_uid
+  );
+
+  const processedNavItems = slug ? getNavItems(slug, isOwner) : [];
   return (
     <>
       <Sheet open={open} onOpenChange={setOpen}>
