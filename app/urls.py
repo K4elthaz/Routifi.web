@@ -29,4 +29,5 @@ urlpatterns = [
 
     # Tag Endpoints
     path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),
+    path("<str:slug>/tags/<str:tag_id>/", TagView.as_view(), name="tag-detail"),
 ]
