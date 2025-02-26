@@ -16,6 +16,8 @@ import Users from "./components/users/users-page";
 import Maps from "./components/maps/maps-page";
 import Tags from "./components/tags/tags-page";
 import Settings from "./components/settings/settings-page";
+import LeadsPool from "./components/leads/pool/leads-pool";
+import LeadsHistory from "./components/leads/history/leads-history";
 
 import AccountSettings from "./pages/account-settings";
 
@@ -31,6 +33,8 @@ function AppContent() {
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="leads" element={<Leads />} />
+          <Route path="leads/pool" element={<LeadsPool />} />
+          <Route path="leads/history" element={<LeadsHistory />} />
           <Route path="users" element={<Users />} />
           <Route path="maps" element={<Maps />} />
           <Route path="tags" element={<Tags />} />

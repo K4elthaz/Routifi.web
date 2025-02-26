@@ -8,4 +8,6 @@ export interface NavItem {
   icon?: LucideIcon;
   label?: string;
   description?: string;
+  children?: NavItem[];
+  ownerOnly?: boolean;
 }

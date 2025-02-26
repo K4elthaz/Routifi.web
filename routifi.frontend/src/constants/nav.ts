@@ -8,8 +8,21 @@ export const navItems = [
   },
   {
     title: "Leads",
-    href: "/org/{slug}/leads",
     icon: Users2,
+    children: [
+      {
+        title: "Leads",
+        href: "/org/{slug}/leads",
+      },
+      {
+        title: "Leads Pool",
+        href: "/org/{slug}/leads/pool",
+      },
+      {
+        title: "Leads History",
+        href: "/org/{slug}/leads/history",
+      },
+    ],
   },
   {
     title: "Users",
@@ -39,7 +52,13 @@ export const getNavItems = (slug: string, isOwner: boolean) => {
   return navItems
     .map((item) => ({
       ...item,
-      href: item.href.replace("{slug}", slug),
+      href: item.href ? item.href.replace("{slug}", slug) : undefined,
+      children: item.children
+        ? item.children.map((child) => ({
+            ...child,
+            href: child.href.replace("{slug}", slug),
+          }))
+        : undefined,
     }))
     .filter((item) => isOwner || !item.ownerOnly);
 };
