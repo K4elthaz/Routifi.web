@@ -236,3 +236,62 @@ class LeadAssignmentView(APIView):
             redis_client.rpush(redis_queue_name, str(lead_assignment.lead.id))
 
             return Response({"message": "Lead rejected and re-added to the queue."}, status=status.HTTP_200_OK)
+
+class LeadHistoryView(APIView):
+    """ Fetches lead history for a specific organization, accessible only to the creator/owner """
+
+    def get(self, request, slug, *args, **kwargs):
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        organization = get_object_or_404(Organization, slug=slug)
+
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to access this data"}, status=status.HTTP_403_FORBIDDEN)
+
+        lead_histories = LeadHistory.objects.filter(lead__organization=organization)
+        
+        user_stats = {}
+        for history in lead_histories:
+            user_id = history.user.id
+            if user_id not in user_stats:
+                user_stats[user_id] = {
+                    "user": history.user.full_name,
+                    "total_accepted": 0,
+                    "total_response_time": 0,
+                    "response_count": 0
+                }
+
+            if history.action == "accepted":
+                user_stats[user_id]["total_accepted"] += 1
+            
+            if history.user_response_time:
+                user_stats[user_id]["total_response_time"] += history.user_response_time
+                user_stats[user_id]["response_count"] += 1
+
+        for user_id, stats in user_stats.items():
+            if stats["response_count"] > 0:
+                stats["average_response_time"] = stats["total_response_time"] / stats["response_count"]
+            else:
+                stats["average_response_time"] = 0
+
+            # Apply max cap of 10 minutes per response
+            stats["average_response_time"] = min(stats["average_response_time"], 10)
+
+            # Remove unnecessary fields
+            del stats["total_response_time"]
+            del stats["response_count"]
+
+        return JsonResponse({"organization": organization.name, "members": list(user_stats.values())}, status=status.HTTP_200_OK)
