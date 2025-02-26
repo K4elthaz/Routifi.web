@@ -39,8 +39,8 @@ function AppContent() {
           <Route path="maps" element={<Maps />} />
           <Route path="tags" element={<Tags />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="account" element={<AccountSettings />} />
         </Route>
+        <Route path="/account" element={<AccountSettings />} />
       </Routes>
     </>
   );

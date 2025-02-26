@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { logoutUser } from "@/api/userAuthAPI";
 import { useToast } from "@/hooks/use-toast";
 import useAuthStore from "@/store/authStore";
@@ -22,7 +22,6 @@ export default function NavUser() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuthStore();
-  const { slug } = useParams();
 
   const handleLogout = () => {
     logoutUser();
@@ -64,7 +63,7 @@ export default function NavUser() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to={`/org/${slug}/account`}>Account Settings</Link>
+            <Link to={"/account"}>Account Settings</Link>
           </DropdownMenuItem>
           <DropdownMenuItem>Settings</DropdownMenuItem>
         </DropdownMenuGroup>
