@@ -204,7 +204,7 @@ class LeadAssignmentView(APIView):
                 user=user_profile,
                 action="accepted",
                 user_choice="accepted",
-                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() / 60
             )
 
             # Assign the lead to the user's `LeadsOwned`
@@ -226,7 +226,7 @@ class LeadAssignmentView(APIView):
                 user=user_profile,
                 action="rejected",
                 user_choice="rejected",
-                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() // 60
+                user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() / 60
             )
 
             # Remove token and re-add lead to Redis queue

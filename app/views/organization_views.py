@@ -72,7 +72,35 @@ class OrganizationView(APIView):
             serializer.save(created_by=user_profile)  # The 'created_by' field is set to the UserProfile
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+class GenerateNewAPIKey(APIView):
+    def post(self, request, org_id):
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return Response({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return Response({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        org = get_object_or_404(Organization, id=org_id)
+
+        if org.created_by != user_profile:
+            return Response({"error": "Only the owner of the organization can generate a new API key"}, status=status.HTTP_403_FORBIDDEN)
+
+        new_api_key = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
+        org.api_key = new_api_key
+        org.save()
+
+        return Response({"api_key": new_api_key}, status=status.HTTP_200_OK)
+
 def generate_invite_code(length=8):
     """Generate a random alphanumeric invite code."""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))

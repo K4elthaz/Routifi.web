@@ -1,6 +1,6 @@
 from django.urls import path
 from .views.user_views import UserProfileView, UserLoginView, verify_supabase_token, TokenRefreshView, LogoutView
-from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView, OrganizationBySlugView
+from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView, OrganizationBySlugView, GenerateNewAPIKey
 from .views.lead_views import LeadCreateView, LeadAssignmentView
 from .views.tag_views import TagView
 
@@ -18,7 +18,8 @@ urlpatterns = [
     path("<uuid:org_id>/invite/", InviteUserToOrganization.as_view(), name="invite-user"),
     path("accept-invite/", AcceptInviteView.as_view(), name="accept-invite"),
     path("<str:slug>/", OrganizationBySlugView.as_view(), name="organization-by-slug"),
-
+    path("<str:slug>/generate-api-key/", GenerateNewAPIKey.as_view(), name="generate-api-key"),
+    
     # Lead Endpoints
     path('org/leads/', LeadCreateView.as_view(), name='create-lead'),
     path('leads/assignment/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='lead-assignment'), 
