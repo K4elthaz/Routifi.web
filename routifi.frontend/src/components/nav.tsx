@@ -18,12 +18,14 @@ interface DashboardNavProps {
   setOpen?: Dispatch<SetStateAction<boolean>>;
   isMobileNav?: boolean;
   slug?: string;
+  isOwner: boolean;
 }
 
 export function DashboardNav({
   items,
   setOpen,
   isMobileNav = false,
+  isOwner,
 }: DashboardNavProps) {
   const { isMinimized } = useSidebar();
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>(
@@ -44,88 +46,92 @@ export function DashboardNav({
   return (
     <nav className="grid items-start gap-2">
       <TooltipProvider>
-        {items.map((item, index) => (
-          <div key={index}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <NavLink
-                    to={item.href || "#"}
-                    end
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2 overflow-hidden rounded-md py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                        item.children
-                          ? ""
-                          : isActive
-                          ? "bg-accent"
-                          : "transparent",
-                        item.disabled && "cursor-not-allowed opacity-80"
-                      )
-                    }
-                    onClick={(e) => {
-                      if (item.children) {
-                        e.preventDefault(); // Prevent redirect when toggling section
-                        toggleSection(item.title);
+        {items
+          .filter((item) => isOwner || !item.ownerOnly)
+          .map((item, index) => (
+            <div key={index}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <NavLink
+                      to={item.href || "#"}
+                      end
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-2 overflow-hidden rounded-md py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+                          item.children
+                            ? ""
+                            : isActive
+                            ? "bg-accent"
+                            : "transparent",
+                          item.disabled && "cursor-not-allowed opacity-80"
+                        )
                       }
-                      if (setOpen && !item.children) setOpen(false); // Close sidebar only if no children
-                    }}
-                  >
-                    <span className="flex items-center w-full">
-                      {item.icon ? (
-                        <item.icon className="ml-3 mr-5 size-5 flex-none" />
-                      ) : (
-                        <ChevronLeft className="ml-3 mr-5 size-5 flex-none" />
-                      )}
-                      {isMobileNav || (!isMinimized && !isMobileNav) ? (
-                        <span className="mr-2 truncate">{item.title}</span>
-                      ) : null}
-                      {item.children && (
-                        <ChevronDown
-                          className={`ml-auto transition-transform ${
-                            openSections[item.title] ? "rotate-180" : ""
-                          }`}
-                        />
-                      )}
-                    </span>
-                  </NavLink>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                align="center"
-                side="right"
-                sideOffset={8}
-                className={!isMinimized ? "hidden" : "inline-block"}
-              >
-                {item.title}
-              </TooltipContent>
-            </Tooltip>
+                      onClick={(e) => {
+                        if (item.children) {
+                          e.preventDefault();
+                          toggleSection(item.title);
+                        }
+                        if (setOpen && !item.children) setOpen(false);
+                      }}
+                    >
+                      <span className="flex items-center w-full">
+                        {item.icon ? (
+                          <item.icon className="ml-3 mr-5 size-5 flex-none" />
+                        ) : (
+                          <ChevronLeft className="ml-3 mr-5 size-5 flex-none" />
+                        )}
+                        {isMobileNav || (!isMinimized && !isMobileNav) ? (
+                          <span className="mr-2 truncate">{item.title}</span>
+                        ) : null}
+                        {item.children && (
+                          <ChevronDown
+                            className={`ml-auto transition-transform ${
+                              openSections[item.title] ? "rotate-180" : ""
+                            }`}
+                          />
+                        )}
+                      </span>
+                    </NavLink>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  align="center"
+                  side="right"
+                  sideOffset={8}
+                  className={!isMinimized ? "hidden" : "inline-block"}
+                >
+                  {item.title}
+                </TooltipContent>
+              </Tooltip>
 
-            {/* Render Children */}
-            {item.children && openSections[item.title] && (
-              <div className="ml-5 mt-1 space-y-1 border-l-2 border-gray-500 pl-3">
-                {item.children.map((child, childIndex) => (
-                  <NavLink
-                    key={childIndex}
-                    to={child.href || "#"}
-                    end
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-2 rounded-md py-2 px-2 text-sm hover:bg-accent hover:text-accent-foreground",
-                        isActive ? "bg-accent" : "transparent"
-                      )
-                    }
-                    onClick={() => {
-                      if (setOpen) setOpen(false);
-                    }}
-                  >
-                    <span className="truncate">{child.title}</span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+              {/* Render Children */}
+              {item.children && openSections[item.title] && (
+                <div className="ml-5 mt-1 space-y-1 border-l-2 border-gray-500 pl-3">
+                  {item.children
+                    .filter((child) => isOwner || !child.ownerOnly)
+                    .map((child, childIndex) => (
+                      <NavLink
+                        key={childIndex}
+                        to={child.href || "#"}
+                        end
+                        className={({ isActive }) =>
+                          cn(
+                            "flex items-center gap-2 rounded-md py-2 px-2 text-sm hover:bg-accent hover:text-accent-foreground ml-3",
+                            isActive ? "bg-accent" : "transparent"
+                          )
+                        }
+                        onClick={() => {
+                          if (setOpen) setOpen(false);
+                        }}
+                      >
+                        <span className="truncate">{child.title}</span>
+                      </NavLink>
+                    ))}
+                </div>
+              )}
+            </div>
+          ))}
       </TooltipProvider>
     </nav>
   );

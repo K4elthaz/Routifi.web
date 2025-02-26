@@ -36,6 +36,7 @@ export function MobileSidebar({ slug }: { slug?: string }) {
                   isMobileNav={true}
                   setOpen={setOpen}
                   slug={slug}
+                  isOwner={isOwner}
                 />
               </div>
             </div>

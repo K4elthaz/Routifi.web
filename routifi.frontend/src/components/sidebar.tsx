@@ -56,7 +56,10 @@ export default function Sidebar({ className, logo, slug }: SidebarProps) {
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <div className="mt-3 space-y-1">
-            <DashboardNav items={getNavItems(slug || "", isOwner)} />
+            <DashboardNav
+              items={getNavItems(slug || "", isOwner)}
+              isOwner={isOwner}
+            />
           </div>
         </div>
       </div>
