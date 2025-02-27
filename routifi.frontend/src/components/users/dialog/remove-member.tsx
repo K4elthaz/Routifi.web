@@ -13,7 +13,16 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Trash } from "lucide-react";
 
-export default function RemoveMemberDialog({ member }) {
+interface RemoveMemberDialogProps {
+  member: {
+    name: string;
+    email: string;
+  };
+}
+
+export default function RemoveMemberDialog({
+  member,
+}: RemoveMemberDialogProps) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 

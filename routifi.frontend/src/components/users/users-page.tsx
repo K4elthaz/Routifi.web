@@ -40,7 +40,9 @@ export default function Users() {
   return (
     <PageContainer>
       <div className="space-y-4">
-        <Breadcrumbs items={[{ title: "Members", link: "/users" }]} />
+        <Breadcrumbs
+          items={[{ title: "Members", link: `/org/${slug}/users` }]}
+        />
 
         <div className="flex items-center justify-between">
           <Heading
