@@ -206,6 +206,8 @@ class LeadAssignmentView(APIView):
                 user_choice="accepted",
                 user_response_time=(timezone.now() - lead_assignment.assigned_at).total_seconds() / 60
             )
+            
+            LeadsInQueue.objects.filter(lead=lead_assignment.lead).delete()
 
             # Assign the lead to the user's `LeadsOwned`
             user_profile.LeadsOwned.add(lead_assignment.lead)
