@@ -40,7 +40,6 @@ class OrganizationSerializer(serializers.ModelSerializer):
                 "description": data["description"],
                 "logo": data["logo"],
                 "created_at": data["created_at"],
-                "members": data["members"],
             }  # Exclude `api_key` for non-owners
 
         return {}  # Return empty object instead of None to avoid issues
