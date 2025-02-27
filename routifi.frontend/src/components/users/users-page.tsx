@@ -1,5 +1,6 @@
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 import PageContainer from "@/components/page-container";
-
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
@@ -13,21 +14,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { Filter } from "lucide-react";
+import { useOrganizationStore } from "@/store/organizationStore";
+import UpdateMembersDialog from "./dialog/update-member";
+import RemoveMemberDialog from "./dialog/remove-member";
 
 export default function Users() {
+  const { slug } = useParams<{ slug: string }>();
+  const { organizations, fetchOrganizations } = useOrganizationStore();
+
+  const organization = organizations.find((org) => org.slug === slug);
+
+  useEffect(() => {
+    if (!organization) {
+      fetchOrganizations();
+    }
+  }, [organization]);
+
   return (
     <PageContainer>
       <div className="space-y-4">
-        <Breadcrumbs items={[{ title: "Users", link: "/users" }]} />
+        <Breadcrumbs items={[{ title: "Members", link: "/users" }]} />
 
         <div className="flex items-center justify-between">
           <Heading
-            title={`Users`}
+            title={`Members`}
             description="Manage your organization and clients."
           />
 
-          <Button size="sm">Add User</Button>
+          <Button size="sm">Add Member</Button>
         </div>
         <Separator />
 
@@ -45,89 +66,50 @@ export default function Users() {
                 <TableHead>Members</TableHead>
                 <TableHead className="hidden sm:table-cell">Response</TableHead>
                 <TableHead className="text-right">AVG Response</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Liam Johnson</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    liam@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.34</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Olivia Smith</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    olivia@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.45</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Noah Williams</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    noah@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.54</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Emma Brown</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    emma@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.64</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Liam Johnson</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    liam@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.24</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Liam Johnson</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    liam@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.32</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Olivia Smith</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    olivia@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.36</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <div className="font-medium">Emma Brown</div>
-                  <div className="hidden text-sm text-muted-foreground md:inline">
-                    emma@example.com
-                  </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell"></TableCell>
-                <TableCell className="text-right">00.38</TableCell>
-              </TableRow>
+              {organization?.members && organization.members.length > 0 ? (
+                organization.members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>
+                      <div className="font-medium">{member.name}</div>
+                      <div className="hidden text-sm text-muted-foreground md:inline">
+                        {member.email}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell"></TableCell>
+                    <TableCell className="text-right">00.34 </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <UpdateMembersDialog member={member} />
+                            </TooltipTrigger>
+                            <TooltipContent>Update</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <RemoveMemberDialog member={member} />
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center">
+                    No members found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

@@ -28,7 +28,7 @@ export const navItems = [
     ],
   },
   {
-    title: "Users",
+    title: "Members",
     href: "/org/{slug}/users",
     icon: User,
   },
