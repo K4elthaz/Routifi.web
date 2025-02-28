@@ -29,10 +29,15 @@ def assign_leads_to_members(batch_size=5):
             logger.info(f"Skipping {organization.name}: pending leads exist.")
             continue
 
+        # users = UserProfile.objects.filter(
+        #     memberships__organization=organization,
+        #     memberships__accepted=True
+        # ).prefetch_related("tags").distinct()
+
         users = UserProfile.objects.filter(
             memberships__organization=organization,
             memberships__accepted=True
-        ).prefetch_related("tags").distinct()
+        ).distinct()
 
         redis_queue_name = f"leads_queue:{organization.slug.replace(' ', '_').lower()}"
 
@@ -52,10 +57,16 @@ def assign_leads_to_members(batch_size=5):
                 logger.info(f"Lead {lead.id} already assigned.")
                 continue
 
+            # matching_users = [
+            #     user for user in users
+            #     if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
+            #     and current_day in user.availability
+            #     and not LeadAssignment.objects.filter(user=user, status="pending").exists()
+            # ]
+            
             matching_users = [
                 user for user in users
-                if set(user.tags.values_list("name", flat=True)).intersection(set(lead.tags or []))
-                and current_day in user.availability
+                if current_day in user.availability
                 and not LeadAssignment.objects.filter(user=user, status="pending").exists()
             ]
 
