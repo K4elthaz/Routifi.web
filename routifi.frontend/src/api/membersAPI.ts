@@ -1,6 +1,6 @@
 import api from "@/utility/api";
 import { checkAuth, refreshAccessToken } from "@/api/userAuthAPI";
-import { MemberData } from "@/types/members";
+import { MemberData, GetMemberTag } from "@/types/members";
 
 const ensureAuth = async (): Promise<boolean> => {
   const user = await checkAuth();
@@ -29,5 +29,25 @@ export const SetTagToMember = async (
     return response.data;
   } catch (error: any) {
     throw error.response?.data ?? { message: "Failed to set tags to member" };
+  }
+};
+
+export const GetTagToMember = async (
+  orgId: string,
+  memberId: string
+): Promise<GetMemberTag> => {
+  if (!(await ensureAuth())) {
+    window.location.href = "/sign-in";
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    const response = await api.get(
+      `/app/organizations/${orgId}/members/${memberId}/tags/`
+    );
+    console.log("Data:", response.data);
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data ?? { message: "Failed to get tags to member" };
   }
 };

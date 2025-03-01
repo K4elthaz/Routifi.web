@@ -38,3 +38,26 @@ class MemberView(APIView):
             assigned_tags.append(tag_id)
 
         return Response({"message": f"Tags {assigned_tags} added to the member"}, status=status.HTTP_200_OK)
+    
+    def get(self, request, organization_id, user_id):
+        # Step 1: Verify authentication
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+        
+        organization = get_object_or_404(Organization, id=organization_id)
+
+        membership = get_object_or_404(Membership, user__supabase_uid=user_id, organization=organization)
+
+        # Fetching tags from MembershipTag
+        tags = MembershipTag.objects.filter(membership=membership).values_list("tag__id", "tag__name")
+
+        membership_data = {
+            "user_id": user_id,
+            "organization_id": organization_id,
+            "tags": list(tags)
+        }
+
+        return Response(membership_data, status=status.HTTP_200_OK)
+
+

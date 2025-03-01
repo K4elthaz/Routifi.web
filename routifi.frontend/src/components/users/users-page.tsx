@@ -22,19 +22,23 @@ import {
 } from "../ui/tooltip";
 import { Filter } from "lucide-react";
 import { useOrganizationStore } from "@/store/organizationStore";
+import { useMemberStore } from "@/store/memberStore";
 import UpdateMembersDialog from "./dialog/update-member";
 import RemoveMemberDialog from "./dialog/remove-member";
 import { InviteButton } from "../dashboard/invite-button";
+import { Badge } from "../ui/badge";
 
 export default function Users() {
   const { slug } = useParams<{ slug: string }>();
   const { organizations, fetchOrganizations } = useOrganizationStore();
-
+  const { fetchAllTagsForMembers, memberTags } = useMemberStore();
   const organization = organizations.find((org) => org.slug === slug);
 
   useEffect(() => {
     if (!organization) {
       fetchOrganizations();
+    } else if (organization.members?.length) {
+      fetchAllTagsForMembers(organization.id, organization.members ?? []);
     }
   }, [organization]);
 
@@ -69,13 +73,13 @@ export default function Users() {
             <TableHeader>
               <TableRow>
                 <TableHead>Members</TableHead>
-                <TableHead>Tag</TableHead>
+                <TableHead className="text-center">Tag</TableHead>
                 <TableHead className="hidden sm:table-cell">Response</TableHead>
                 <TableHead className="text-right">AVG Response</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="cursor-pointer">
               {organization?.members && organization.members.length > 0 ? (
                 organization.members.map((member) => (
                   <TableRow key={member.id}>
@@ -85,7 +89,21 @@ export default function Users() {
                         {member.email}
                       </div>
                     </TableCell>
-                    <TableCell>Tag1</TableCell>
+                    <TableCell className="text-center">
+                      {memberTags[member.id]?.length > 0 ? (
+                        memberTags[member.id].map((tag) => (
+                          <Badge
+                            key={tag.tagId}
+                            className="px-2 py-1 rounded-md text-sm mr-1 cursor-pointer"
+                            variant="outline"
+                          >
+                            {tag.tagName}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-gray-400 text-sm">No Tags</span>
+                      )}
+                    </TableCell>
                     <TableCell className="hidden sm:table-cell"></TableCell>
                     <TableCell className="text-right">00.34 </TableCell>
                     <TableCell>
