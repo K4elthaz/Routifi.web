@@ -12,9 +12,13 @@ export const registerUser = async (userData: UserData): Promise<any> => {
 };
 
 // Login User
-export const loginUser = async (credentials: UserData): Promise<LoginResponse> => {
+export const loginUser = async (
+  credentials: UserData
+): Promise<LoginResponse> => {
   try {
-    const response = await api.post("/app/login/", credentials, { withCredentials: true });
+    const response = await api.post("/app/login/", credentials, {
+      withCredentials: true,
+    });
 
     if (!response.data?.user) {
       throw new Error("Invalid API response: Missing user data");
@@ -29,7 +33,9 @@ export const loginUser = async (credentials: UserData): Promise<LoginResponse> =
 // Check Authentication
 export const checkAuth = async (): Promise<any> => {
   try {
-    const response = await api.get("/app/verify-token/", { withCredentials: true });
+    const response = await api.get("/app/verify-token/", {
+      withCredentials: true,
+    });
     return response.data.user; // ✅ Return user data if valid
   } catch (error) {
     console.error("User not authenticated", error);
@@ -48,10 +54,13 @@ export const logoutUser = async (): Promise<void> => {
   }
 };
 
-
 export const refreshAccessToken = async (): Promise<string | null> => {
   try {
-    const response = await api.post("/app/token-refresh/", {}, { withCredentials: true });
+    const response = await api.post(
+      "/app/token-refresh/",
+      {},
+      { withCredentials: true }
+    );
 
     if (response.data.access_token) {
       console.log("Access token refreshed");

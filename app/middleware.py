@@ -12,6 +12,7 @@ class TokenVerificationMiddleware(MiddlewareMixin):
         # ✅ Allow public endpoints without token verification
         open_endpoints = [
             '/app/login/',
+            '/app/user/',
             '/app/token-refresh/',
             '/app/org/leads/'  # 👈 Add this to bypass token check for leads
         ]

@@ -3,6 +3,7 @@ from .views.user_views import UserProfileView, UserLoginView, verify_supabase_to
 from .views.organization_views import OrganizationView, InviteUserToOrganization, AcceptInviteView, OrganizationBySlugView, GenerateNewAPIKey
 from .views.lead_views import LeadCreateView, LeadAssignmentView, LeadHistoryView
 from .views.tag_views import TagView
+from .views.member_views import MemberView
 
 urlpatterns = [
     # User Endpoints
@@ -30,5 +31,8 @@ urlpatterns = [
     # Tag Endpoints
     path("<str:slug>/tags/", TagView.as_view(), name="tag-list"),
     path("<str:slug>/tags/<str:tag_id>/", TagView.as_view(), name="tag-detail"),
+
+    # Member Update Endpoint
+    path("organizations/<uuid:organization_id>/members/<uuid:user_id>/tags/", MemberView.as_view(), name="member-tags"),
     
 ]

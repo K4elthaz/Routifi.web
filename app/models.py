@@ -17,7 +17,7 @@ class UserProfile(models.Model):
     location = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    tags = models.ManyToManyField("Tag", related_name="users", blank=True)
+    #tags = models.ManyToManyField("Tag", related_name="users", blank=True)
     availability = models.JSONField(default=list)
     LeadsOwned = models.ManyToManyField("Lead", null=True, blank=True)
     def clean(self):
@@ -59,6 +59,15 @@ class Organization(models.Model):
 
     def __str__(self):
         return self.name
+    
+class Tag(models.Model):
+    """A tag that can be assigned to users"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="tags")
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
 
 class Membership(models.Model):
     """Tracks user roles within an organization."""
@@ -79,6 +88,7 @@ class Membership(models.Model):
     is_user = models.BooleanField(default=False)
     invite_code = models.CharField(max_length=10, unique=True, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
+    tags = models.ManyToManyField(Tag, through="MembershipTag", blank=True)
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user", "organization"], name="unique_membership")
@@ -87,14 +97,10 @@ class Membership(models.Model):
     def __str__(self):
         return f"{self.email or self.user.email} - {self.organization.name} ({self.role})"
 
-class Tag(models.Model):
-    """A tag that can be assigned to users"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="tags")
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
+class MembershipTag(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
 class Lead(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
