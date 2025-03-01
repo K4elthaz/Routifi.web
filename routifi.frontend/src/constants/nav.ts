@@ -20,11 +20,11 @@ export const navItems = [
         href: "/org/{slug}/leads/pool",
         ownerOnly: true,
       },
-      {
-        title: "Leads History",
-        href: "/org/{slug}/leads/history",
-        ownerOnly: true,
-      },
+      // {
+      //   title: "Leads History",
+      //   href: "/org/{slug}/leads/history",
+      //   ownerOnly: true,
+      // },
     ],
   },
   {
