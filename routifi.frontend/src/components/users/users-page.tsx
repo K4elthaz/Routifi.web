@@ -24,6 +24,7 @@ import { Filter } from "lucide-react";
 import { useOrganizationStore } from "@/store/organizationStore";
 import UpdateMembersDialog from "./dialog/update-member";
 import RemoveMemberDialog from "./dialog/remove-member";
+import { InviteButton } from "../dashboard/invite-button";
 
 export default function Users() {
   const { slug } = useParams<{ slug: string }>();
@@ -50,7 +51,9 @@ export default function Users() {
             description="Manage your organization and clients."
           />
 
-          <Button size="sm">Add Member</Button>
+          {organization ? (
+            <InviteButton organizationId={organization.id} />
+          ) : null}
         </div>
         <Separator />
 
@@ -66,6 +69,7 @@ export default function Users() {
             <TableHeader>
               <TableRow>
                 <TableHead>Members</TableHead>
+                <TableHead>Tag</TableHead>
                 <TableHead className="hidden sm:table-cell">Response</TableHead>
                 <TableHead className="text-right">AVG Response</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -81,6 +85,7 @@ export default function Users() {
                         {member.email}
                       </div>
                     </TableCell>
+                    <TableCell>Tag1</TableCell>
                     <TableCell className="hidden sm:table-cell"></TableCell>
                     <TableCell className="text-right">00.34 </TableCell>
                     <TableCell>
@@ -98,7 +103,7 @@ export default function Users() {
                             <TooltipTrigger>
                               <RemoveMemberDialog member={member} />
                             </TooltipTrigger>
-                            <TooltipContent>Delete</TooltipContent>
+                            <TooltipContent>Remove</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
