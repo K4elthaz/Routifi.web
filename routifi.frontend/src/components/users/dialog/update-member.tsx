@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil } from "lucide-react";
+import { UserRoundPen } from "lucide-react";
 import { useTagStore } from "@/store/tagStore";
 import { useOrganizationStore } from "@/store/organizationStore";
 import { useMemberStore } from "@/store/memberStore";
@@ -84,7 +84,7 @@ export default function UpdateMembersDialog({
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Pencil className="mr-2" size={18} />
+        <UserRoundPen className="mr-2" size={18} />
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

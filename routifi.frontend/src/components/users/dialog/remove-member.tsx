@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Trash } from "lucide-react";
+import { UserRoundX } from "lucide-react";
 
 interface RemoveMemberDialogProps {
   member: {
@@ -29,7 +29,7 @@ export default function RemoveMemberDialog({
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Trash className="mr-2" size={18} />
+        <UserRoundX className="mr-2" size={18} />
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

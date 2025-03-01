@@ -83,7 +83,7 @@ export function InviteButton({ organizationId }: InviteButtonProps) {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button>Invite new member</Button>
+        <Button>Invite member</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
