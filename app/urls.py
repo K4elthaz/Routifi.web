@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Lead Endpoints
     path('org/leads/', LeadCreateView.as_view(), name='create-lead'),
+    path('org/leads/<slug:slug>/<uuid:lead_id>/', LeadCreateView.as_view(), name="lead-update-delete"),
     path('leads/assignment/<uuid:lead_id>/', LeadAssignmentView.as_view(), name='lead-assignment'), 
     path('org/<str:slug>/leads/', LeadCreateView.as_view(), name='organization-leads'),
     path('org/<slug:slug>/lead-history/', LeadHistoryView.as_view(), name='lead-history'),

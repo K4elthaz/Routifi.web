@@ -121,6 +121,71 @@ class LeadCreateView(APIView):
 
         return JsonResponse({"leads": serializer.data}, status=status.HTTP_200_OK)
     
+    def put(self, request, slug, lead_id, *args, **kwargs):
+        """Update lead details if it has not been assigned."""
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user_data['user']['id'])
+        organization = get_object_or_404(Organization, slug=slug)
+
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to update this lead"}, status=status.HTTP_403_FORBIDDEN)
+
+        lead = get_object_or_404(Lead, id=lead_id, organization=organization)
+
+        # Check if the lead is assigned
+        if lead.assignments.exists():
+            return JsonResponse({"error": "This lead has been assigned and cannot be updated"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Update lead details
+        data = json.loads(request.body)
+        serializer = LeadSerializer(lead, data=data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse({"message": "Lead updated successfully", "lead": serializer.data}, status=status.HTTP_200_OK)
+
+        return JsonResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, slug, lead_id, *args, **kwargs):
+        """Delete lead only if it is not assigned."""
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user_data['user']['id'])
+        organization = get_object_or_404(Organization, slug=slug)
+
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to delete this lead"}, status=status.HTTP_403_FORBIDDEN)
+
+        lead = get_object_or_404(Lead, id=lead_id, organization=organization)
+
+        # Check if the lead is assigned
+        if lead.assignments.exists():
+            return JsonResponse({"error": "This lead has been assigned and cannot be deleted"}, status=status.HTTP_403_FORBIDDEN)
+
+        lead.delete()
+        return JsonResponse({"message": "Lead deleted successfully"}, status=status.HTTP_200_OK)
+    
 
 class LeadAssignmentView(APIView):
     """ Handles lead acceptance and rejection """
