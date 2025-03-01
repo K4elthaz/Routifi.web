@@ -8,7 +8,6 @@ import { useParams } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,6 +27,7 @@ export default function Leads() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedLead, setSelectedLead] = useState<any | null>(null); // Store selected lead
 
   useEffect(() => {
     const fetchLeads = async () => {
@@ -45,7 +45,16 @@ export default function Leads() {
     fetchLeads();
   }, [slug]);
 
-  // ✅ Handle Lead Update (Only if not assigned)
+  // ✅ Handle Lead Deletion (Only if not assigned)
+  const handleDeleteLead = async (leadId: string) => {
+    try {
+      await deleteLead(slug!, leadId);
+      setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== leadId));
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
   const handleUpdateLead = async (leadId: string) => {
     const updatedData = { status: "Updated Lead" }; // Example update
     try {
@@ -58,15 +67,6 @@ export default function Leads() {
     }
   };
 
-  // ✅ Handle Lead Deletion (Only if not assigned)
-  const handleDeleteLead = async (leadId: string) => {
-    try {
-      await deleteLead(slug!, leadId);
-      setLeads((prevLeads) => prevLeads.filter((lead) => lead.id !== leadId));
-    } catch (error) {
-      console.error("Delete failed:", error);
-    }
-  };
 
   return (
     <PageContainer>
@@ -83,45 +83,88 @@ export default function Leads() {
 
         {!loading && !error && (
           <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="">
-                  <th className="px-4 py-2 border">Name</th>
-                  <th className="px-4 py-2 border">Email</th>
-                  <th className="px-4 py-2 border">Phone</th>
-                  <th className="px-4 py-2 border">Location</th>
-                  <th className="px-4 py-2 border">Tags</th>
-                  <th className="px-4 py-2 border">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Tags</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="text-center border">
-                    <td className="px-4 py-2 border">{lead.name}</td>
-                    <td className="px-4 py-2 border">{lead.email}</td>
-                    <td className="px-4 py-2 border">{lead.phone || "N/A"}</td>
-                    <td className="px-4 py-2 border">{lead.location || "N/A"}</td>
-                    <td className="px-4 py-2 border">
-                      {lead.tags ? lead.tags.join(", ") : "N/A"}
-                    </td>
-                    <td className="px-4 py-2 border space-x-2">
-                      <button
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        onClick={() => handleUpdateLead(lead.id)}
+                  <Dialog key={lead.id}>
+                    <DialogTrigger asChild>
+                      <TableRow
+                        className="cursor-pointer hover:bg-gray-100"
+                        onClick={() => setSelectedLead(lead)}
                       >
-                        Update
-                      </button>
-                      <button
-                        className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                        onClick={() => handleDeleteLead(lead.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+                        <TableCell>{lead.name}</TableCell>
+                        <TableCell>{lead.email}</TableCell>
+                        <TableCell>{lead.phone || "N/A"}</TableCell>
+                        <TableCell>{lead.location || "N/A"}</TableCell>
+                        <TableCell>{lead.tags ? lead.tags.join(", ") : "N/A"}</TableCell>
+                        <TableCell>
+                          <button
+                            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateLead(lead.id);
+                            }}
+                          >
+                            Update
+                          </button>
+                          <span className="mx-2"></span>
+                          <button
+                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteLead(lead.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    </DialogTrigger>
+                    {selectedLead && selectedLead.id === lead.id && (
+                      <DialogContent className="w-[80vw] max-w-3xl">
+                        <DialogHeader>
+                          <DialogTitle>Lead Details</DialogTitle>
+                        </DialogHeader>
+                        <Table>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="font-bold">Name</TableCell>
+                              <TableCell>{selectedLead.name}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-bold">Email</TableCell>
+                              <TableCell>{selectedLead.email}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-bold">Phone</TableCell>
+                              <TableCell>{selectedLead.phone || "N/A"}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-bold">Location</TableCell>
+                              <TableCell>{selectedLead.location || "N/A"}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-bold">Tags</TableCell>
+                              <TableCell>{selectedLead.tags ? selectedLead.tags.join(", ") : "N/A"}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </DialogContent>
+                    )}
+                  </Dialog>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>
