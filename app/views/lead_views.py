@@ -11,6 +11,7 @@ from django.conf import settings
 from datetime import datetime
 from ..views.user_views import verify_supabase_token
 from rest_framework.response import Response
+import uuid
 # Initialize Redis client
 redis_client = redis.StrictRedis.from_url(settings.REDIS_URL)
 
@@ -362,3 +363,75 @@ class LeadHistoryView(APIView):
             del stats["response_count"]
 
         return JsonResponse({"organization": organization.name, "members": list(user_stats.values())}, status=status.HTTP_200_OK)
+    
+class LeadsInQueueView(APIView):
+    """ Fetches leads in the queue for a specific organization """
+
+    def get(self, request, slug, *args, **kwargs):
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        organization = get_object_or_404(Organization, slug=slug)
+
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to access this data"}, status=status.HTTP_403_FORBIDDEN)
+
+        redis_queue_name = f"leads_queue:{organization.slug.replace(' ', '_').lower()}"
+        lead_ids = redis_client.lrange(redis_queue_name, 0, -1)
+        leads = Lead.objects.filter(id__in=[uuid.UUID(l.decode("utf-8")) for l in lead_ids])
+
+        serializer = LeadSerializer(leads, many=True)
+        return JsonResponse({"organization": organization.name, "leads": serializer.data}, status=status.HTTP_200_OK)
+
+class LeadDetailHistoryView(APIView):
+    """ Fetches history for a specific lead, accessible only to the organization creator/owner """
+
+    def get(self, request, lead_id, *args, **kwargs):
+        response = verify_supabase_token(request)
+        if response.status_code != 200:
+            return response
+
+        try:
+            user_data = json.loads(response.content)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to decode JSON from token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'user' not in user_data:
+            return JsonResponse({"error": "User information not found in token response"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = user_data['user']
+        user_profile = get_object_or_404(UserProfile, supabase_uid=user['id'])
+
+        lead = get_object_or_404(Lead, id=lead_id)
+        organization = lead.organization
+
+        if organization.created_by != user_profile:
+            return JsonResponse({"error": "You do not have permission to access this data"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Fetch lead history, sorting by action first (rejected first), then by created_at (ascending)
+        lead_histories = LeadHistory.objects.filter(lead=lead).order_by("-created_at")
+
+        history_data = [
+            {
+                "id": history.id,
+                "user": history.user.full_name,
+                "action": history.action,
+                "created_at": history.created_at,
+                "user_response_time": history.user_response_time,
+            }
+            for history in lead_histories
+        ]
+
+        return JsonResponse({"lead": lead.name, "history": history_data}, status=status.HTTP_200_OK)

@@ -63,3 +63,17 @@ export const deleteLead = async (slug: string, leadId: string) => {
     throw error.response?.data || "Failed to delete lead";
   }
 };
+
+export const getLeadHistory = async (leadId: string) => {
+  if (!(await ensureAuth())) {
+    window.location.href = "/sign-in";
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    const response = await api.get(`/app/org/leads/${leadId}/lead-history/`);
+    return response.data.history;
+  } catch (error: any) {
+    throw error.response?.data || "Failed to fetch lead history";
+  }
+};
