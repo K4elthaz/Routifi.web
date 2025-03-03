@@ -1,4 +1,5 @@
 export interface UserData {
+  supabase_uid: string;
   email: string;
   password: string;
   full_name?: string;
@@ -18,7 +19,8 @@ export interface LoginResponse {
 
 export interface CheckAuthResponse {
   message: string;
-  user?: {  // ✅ User is optional in case of errors
+  user?: {
+    // ✅ User is optional in case of errors
     id: string;
     email: string;
     full_name?: string;
@@ -26,4 +28,3 @@ export interface CheckAuthResponse {
   };
   expires_in?: number; // ✅ Include token expiry time
 }
-

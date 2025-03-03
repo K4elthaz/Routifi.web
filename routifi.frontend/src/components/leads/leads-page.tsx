@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import UpdateLead from "./dialog/update-lead";
 import RemoveLeadDialog from "./dialog/remove-lead";
-import {LeadHistoryDialog} from "./dialog/lead-history";
+import { LeadHistoryDialog } from "./dialog/lead-history";
 import { useLeadStore } from "@/store/leadStore";
 import useLoadingStore from "@/store/loadingStore";
 import { Lead } from "@/types/lead";
@@ -77,7 +77,7 @@ export default function Leads() {
                 {leads.map((lead) => (
                   <TableRow
                     key={lead.id}
-                    className="cursor-pointer hover:bg-zinc-900 transition duration-200"
+                    className="cursor-pointer  transition duration-200"
                     onClick={() => handleRowClick(lead)}
                   >
                     <TableCell>

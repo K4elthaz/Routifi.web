@@ -4,4 +4,5 @@ export interface UserProfile {
   full_name: string;
   last_name: string;
   date_of_birth?: string;
+  location: string;
 }

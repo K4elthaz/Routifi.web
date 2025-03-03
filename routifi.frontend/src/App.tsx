@@ -20,6 +20,9 @@ import LeadsPool from "./components/leads/pool/leads-pool";
 import LeadsHistory from "./components/leads/history/leads-history";
 
 import AccountSettings from "./pages/account-settings";
+import AccountProfile from "./components/account-settings/account-profile";
+import AccountSecurity from "./components/account-settings/account-security";
+import AccountBilling from "./components/account-settings/account-billing";
 
 function AppContent() {
   return (
@@ -40,7 +43,11 @@ function AppContent() {
           <Route path="tags" element={<Tags />} />
           <Route path="settings" element={<Settings />} />
         </Route>
-        <Route path="/account" element={<AccountSettings />} />
+        <Route path="/account" element={<AccountSettings />}>
+          <Route path="profile" element={<AccountProfile />} />
+          <Route path="security" element={<AccountSecurity />} />
+          <Route path="billing" element={<AccountBilling />} />
+        </Route>
       </Routes>
     </>
   );

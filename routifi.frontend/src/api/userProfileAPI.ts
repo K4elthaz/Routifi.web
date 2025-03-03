@@ -18,10 +18,12 @@ const ensureAuthenticatedRequest = async () => {
 };
 
 // ✅ Get User Profile with Authentication Check
-export const getUserProfile = async (supabase_uid: string): Promise<UserProfile> => {
+export const getUserProfile = async (
+  supabase_uid: string
+): Promise<UserProfile> => {
   await ensureAuthenticatedRequest(); // ✅ Ensure user is authenticated
   try {
-    const response = await api.get(`/user/${supabase_uid}/`);
+    const response = await api.get(`/app/user/${supabase_uid}/`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || "Failed to fetch user profile";
